@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Confirmar Eliminación{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Eliminar Contacto del Prospecto</h1>
+</div>
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <p>¿Estás seguro de que quieres quitar a <strong>{{ prospectotrabajador.trabajador.nombre }}</strong> del prospecto <strong>{{ prospectotrabajador.prospecto.nombre_completo }}</strong>?</p>
+                <p class="text-muted">Esto no eliminará al trabajador del sistema, solo la relación con este prospecto.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Sí, quitar</button>
+                    <a href="{{ prospectotrabajador.prospecto.get_absolute_url }}" class="btn btn-secondary">Cancelar</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

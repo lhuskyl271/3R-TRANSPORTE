@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Editar Calificación{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Editar Calificación de {{ prospectotrabajador.trabajador.nombre }}</h1>
+    <h4>Para: {{ prospectotrabajador.prospecto.nombre_completo }}</h4>
+</div>
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">Guardar Calificación</button>
+                        <a href="{{ prospectotrabajador.prospecto.get_absolute_url }}" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

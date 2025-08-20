@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Confirmar Eliminación{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Eliminar Recordatorio</h1>
+</div>
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <p>¿Estás seguro de que quieres eliminar el recordatorio <strong>"{{ recordatorio.titulo }}"</strong>?</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+                    <a href="{{ recordatorio.prospecto.get_absolute_url }}" class="btn btn-secondary">Cancelar</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

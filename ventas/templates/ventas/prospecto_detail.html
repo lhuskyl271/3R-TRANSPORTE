@@ -1,0 +1,499 @@
+{% extends "base.html" %}
+
+{% block title %}{{ prospecto.nombre_completo }} - Detalles del Prospecto{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+  <div class="container-fluid">
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+<style>
+    /* Estilos adicionales específicos para esta página */
+    .prospecto-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: var(--border-radius);
+        margin-bottom: 2rem;
+        box-shadow: var(--card-shadow);
+    }
+    
+    .prospecto-header h1 {
+        color: white;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .status-badge {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-weight: 600;
+    }
+    
+    .contact-card {
+        transition: all 0.3s ease;
+    }
+    
+    .contact-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--hover-shadow);
+    }
+    
+    .interest-highlight {
+        background: linear-gradient(135deg, rgba(52, 152, 219, 0.1) 0%, rgba(46, 204, 113, 0.1) 100%);
+        border-left: 4px solid var(--secondary-color);
+        padding: 1.5rem;
+        border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    }
+    
+    .tab-content-card {
+        border-radius: 0 0 var(--border-radius) var(--border-radius);
+        border-top: none;
+    }
+    
+    .interaction-item {
+        transition: all 0.3s ease;
+        border-left: 3px solid transparent;
+    }
+    
+    .interaction-item:hover {
+        background-color: rgba(52, 152, 219, 0.05);
+        border-left: 3px solid var(--secondary-color);
+    }
+    
+    .reminder-item {
+        position: relative;
+        padding-left: 1.5rem;
+    }
+    
+    .reminder-item:before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: var(--secondary-color);
+        border-radius: 3px;
+    }
+    
+    .reminder-item.completed:before {
+        background: var(--success-color);
+    }
+    
+    .contact-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: var(--secondary-color);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-right: 1rem;
+    }
+    
+    .rating-stars {
+        color: #FFD700;
+        font-size: 1.1rem;
+    }
+    
+    .empty-star {
+        color: #e9ecef;
+    }
+    
+    .action-btn {
+        transition: all 0.2s ease;
+    }
+    
+    .action-btn:hover {
+        transform: scale(1.1);
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="prospecto-header d-flex justify-content-between align-items-center flex-wrap">
+        <div>
+            <h1><i class="fas fa-user-tie me-3"></i>{{ prospecto.nombre_completo }}</h1>
+            <span class="status-badge bg-{{ prospecto.get_estado_color }}">
+                <i class="fas fa-circle me-2"></i>{{ prospecto.get_estado_display }}
+            </span>
+        </div>
+        <div class="btn-group mt-3 mt-md-0">
+            <a href="{% url 'prospecto-list' %}" class="btn btn-light">
+                <i class="fas fa-arrow-left me-2"></i>Volver
+            </a>
+            <a href="{% url 'prospecto-update' prospecto.pk %}" class="btn btn-warning">
+                <i class="fas fa-edit me-2"></i>Editar
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card contact-card mb-4">
+                <div class="card-header d-flex align-items-center">
+                    <i class="fas fa-address-card me-2"></i>
+                    <span>Información de Contacto</span>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="fas fa-envelope me-3 text-primary"></i>
+                        <div>
+                            <small class="text-muted">Email</small>
+                            <p class="mb-0"><a href="mailto:{{ prospecto.email }}">{{ prospecto.email }}</a></p>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="fas fa-phone me-3 text-primary"></i>
+                        <div>
+                            <small class="text-muted">Teléfono</small>
+                            <p class="mb-0">{{ prospecto.telefono|default:"No especificado" }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-building me-3 text-primary"></i>
+                        <div>
+                            <small class="text-muted">Empresa</small>
+                            <p class="mb-0">{{ prospecto.empresa|default:"No especificada" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center">
+                    <i class="fas fa-bullseye me-2"></i>
+                    <span>Área de Interés</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="interest-highlight p-4">
+                        <h5 class="d-flex align-items-center">
+                            <span class="badge bg-info me-2">
+                              <strong>Interés Principal:</strong><i class="fas fa-{{ prospecto.interes_principal|lower }} me-1"></i>
+                                {{ prospecto.get_interes_principal_display }}
+                            </span>
+                        </h5>
+                        <div class="mt-3">
+                            <div class="card shadow-sm border-0 mb-3">
+                              <div class="card-body">
+                                <h6 class="text-primary fw-bold mb-2">
+                                  <i class="fas fa-star text-warning me-2"></i> Detalles de interés
+                                </h6>
+                                <p class="mb-0 text-muted">
+                                  {{ prospecto.interes_cliente|linebreaks|default:"<em>Sin detalles adicionales.</em>" }}
+                                </p>
+                              </div>
+                            </div>
+
+                        </div>
+                        <hr>
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-user-friends me-2 text-muted"></i>
+                            <small><strong>Referido por:</strong> {{ prospecto.referencio|default:"N/A" }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header d-flex align-items-center">
+                    <i class="fas fa-comment-dots me-2"></i>
+                    <span>Registrar Interacción</span>
+                </div>
+                <div class="card-body">
+                    <form action="{% url 'add-interaccion' prospecto.pk %}" method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="{{ interaccion_form.tipo.id_for_label }}" class="form-label">Tipo</label>
+                            {{ interaccion_form.tipo }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ interaccion_form.notas.id_for_label }}" class="form-label">Notas</label>
+                            {{ interaccion_form.notas }}
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-paper-plane me-2"></i>Registrar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card">
+                <nav>
+                    <div class="nav nav-tabs" id="nav-tab" role="tablist">
+                        <button class="nav-link active" id="nav-contactos-tab" data-bs-toggle="tab" data-bs-target="#nav-contactos" type="button" role="tab">
+                            <i class="fas fa-users me-2"></i>Cal.Empleados 
+                            <span class="badge bg-primary ms-2">{{ relaciones_trabajadores.count }}</span>
+                        </button>
+                        <button class="nav-link" id="nav-interacciones-tab" data-bs-toggle="tab" data-bs-target="#nav-interacciones" type="button" role="tab">
+                            <i class="fas fa-exchange-alt me-2"></i>Interacciones
+                            <span class="badge bg-primary ms-2">{{ interacciones.count }}</span>
+                        </button>
+                        <button class="nav-link" id="nav-recordatorios-tab" data-bs-toggle="tab" data-bs-target="#nav-recordatorios" type="button" role="tab">
+                            <i class="fas fa-bell me-2"></i>Recordatorios
+                            <span class="badge bg-primary ms-2">{{ recordatorios.count }}</span>
+                        </button>
+                    </div>
+                </nav>
+
+                <div class="tab-content tab-content-card" id="nav-tabContent">
+                    <div class="tab-pane fade show active p-4" id="nav-contactos" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="mb-0">Empleados Asociados</h5>
+                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addContactModal">
+                                <i class="fas fa-plus me-2"></i>Cal.Empleado
+                            </button>
+                        </div>
+                        
+                        {% if relaciones_trabajadores %}
+                            <div class="list-group">
+                                {% for relacion in relaciones_trabajadores %}
+                                <div class="list-group-item list-group-item-action">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center">
+                                            <div class="contact-avatar">
+                                                {{ relacion.trabajador.nombre|first|upper }}
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1">{{ relacion.trabajador.nombre }}</h6>
+                                                <small class="text-muted">{{ relacion.trabajador.puesto|default:"Sin puesto definido" }}</small>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            <div class="rating-stars me-3" title="Calificación: {{ relacion.get_calificacion_display }}">
+                                                {% for i in "12345" %}
+                                                    {% if forloop.counter <= relacion.calificacion %}
+                                                        <i class="fas fa-star"></i>
+                                                    {% else %}
+                                                        <i class="far fa-star empty-star"></i>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton{{ forloop.counter }}" data-bs-toggle="dropdown">
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <li>
+                                                        <a class="dropdown-item" href="{% url 'prospecto-trabajador-update' relacion.pk %}">
+                                                            <i class="fas fa-edit text-primary me-2"></i>Editar
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item text-danger" href="{% url 'prospecto-trabajador-delete' relacion.pk %}">
+                                                            <i class="fas fa-trash-alt me-2"></i>Eliminar
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No hay contactos asignados</h5>
+                                <p class="text-muted">Agrega contactos para gestionar mejor la relación con este prospecto</p>
+                                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addContactModal">
+                                    <i class="fas fa-plus me-2"></i>Agregar Primer Contacto
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="tab-pane fade p-4" id="nav-interacciones" role="tabpanel">
+                        {% if interacciones %}
+                            <div class="timeline">
+                                {% for interaccion in interacciones %}
+                                <div class="interaction-item p-3 mb-3 rounded">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <span class="badge bg-primary me-2">
+                                                {{ interaccion.get_tipo_display }}
+                                            </span>
+                                            <small class="text-muted">
+                                                <i class="far fa-clock me-1"></i>
+                                                {{ interaccion.fecha|date:"d M Y H:i" }} por {{ interaccion.creado_por.username }}
+                                            </small>
+                                        </div>
+                                        <div>
+                                            <a href="{% url 'interaccion-update' interaccion.pk %}" class="btn btn-sm btn-outline-primary action-btn me-1" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'interaccion-delete' interaccion.pk %}" class="btn btn-sm btn-outline-danger action-btn" title="Eliminar">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="ps-3 border-start border-2 border-{{ interaccion.tipo|lower }}">
+                                        <p class="mb-0">{{ interaccion.notas|linebreaks }}</p>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-comment-slash fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No hay interacciones registradas</h5>
+                                <p class="text-muted">Registra la primera interacción con este prospecto</p>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="tab-pane fade p-4" id="nav-recordatorios" role="tabpanel">
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <i class="fas fa-plus-circle me-2"></i>Nuevo Recordatorio
+                            </div>
+                            <div class="card-body">
+                                <form action="{% url 'add-recordatorio' prospecto.pk %}" method="post">
+                                    {% csrf_token %}
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="{{ recordatorio_form.titulo.id_for_label }}" class="form-label">Título</label>
+                                            {{ recordatorio_form.titulo }}
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="{{ recordatorio_form.fecha_recordatorio.id_for_label }}" class="form-label">Fecha</label>
+                                            {{ recordatorio_form.fecha_recordatorio }}
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="{{ recordatorio_form.descripcion.id_for_label }}" class="form-label">Descripción</label>
+                                        {{ recordatorio_form.descripcion }}
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="fas fa-save me-2"></i>Guardar Recordatorio
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        <h5 class="mb-3">Recordatorios Programados</h5>
+                        
+                        {% if recordatorios %}
+                            <div class="list-group">
+                                {% for recordatorio in recordatorios %}
+                                <div class="list-group-item reminder-item {% if recordatorio.completado %}completed{% endif %}">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <h6 class="mb-0 {% if recordatorio.completado %}text-muted text-decoration-line-through{% endif %}">
+                                                    {{ recordatorio.titulo }}
+                                                </h6>
+                                                <span class="badge bg-{% if recordatorio.completado %}success{% else %}warning{% endif %}">
+                                                    {% if recordatorio.completado %}
+                                                        <i class="fas fa-check-circle me-1"></i>Completado
+                                                    {% else %}
+                                                        <i class="fas fa-clock me-1"></i>Pendiente
+                                                    {% endif %}
+                                                </span>
+                                            </div>
+                                            <p class="mb-2 {% if recordatorio.completado %}text-muted text-decoration-line-through{% endif %}">
+                                                {{ recordatorio.descripcion|linebreaks }}
+                                            </p>
+                                            <small class="text-muted">
+                                                <i class="far fa-clock me-1"></i>
+                                                {{ recordatorio.fecha_recordatorio|date:"d M Y H:i" }}
+                                            </small>
+                                        </div>
+                                        <div class="d-flex ms-3">
+                                            <a href="{% url 'toggle-recordatorio' recordatorio.pk %}" class="btn btn-sm {% if recordatorio.completado %}btn-outline-secondary{% else %}btn-outline-success{% endif %} me-1 action-btn" title="{% if recordatorio.completado %}Reactivar{% else %}Completar{% endif %}">
+                                                {% if recordatorio.completado %}
+                                                    <i class="fas fa-undo"></i>
+                                                {% else %}
+                                                    <i class="fas fa-check"></i>
+                                                {% endif %}
+                                            </a>
+                                            <a href="{% url 'recordatorio-update' recordatorio.pk %}" class="btn btn-sm btn-outline-primary me-1 action-btn" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'recordatorio-delete' recordatorio.pk %}" class="btn btn-sm btn-outline-danger action-btn" title="Eliminar">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No hay recordatorios programados</h5>
+                                <p class="text-muted">Crea un recordatorio para no perder el seguimiento con este prospecto</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addContactModal" tabindex="-1" aria-labelledby="addContactModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addContactModalLabel">
+                    <i class="fas fa-user-plus me-2"></i>Asignar Nuevo Contacto
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'prospecto-add-trabajador' prospecto.pk %}" method="post">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="id_trabajador" class="form-label">Trabajador</label>
+                        {{ trabajador_form.trabajador }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Calificación</label>
+                        <div class="rating-input">
+                            {% for choice in trabajador_form.calificacion %}
+                            <div class="form-check">
+                                {{ choice.tag }}
+                                <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                    {{ choice.choice_label }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% if trabajador_form.calificacion.errors %}
+                        <div class="text-danger">
+                            {% for error in trabajador_form.calificacion.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Guardar Contacto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

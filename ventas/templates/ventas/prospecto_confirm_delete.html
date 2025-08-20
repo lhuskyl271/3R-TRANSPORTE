@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Confirmar Eliminación{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Eliminar Prospecto</h1>
+</div>
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">Confirmación Requerida</div>
+            <div class="card-body">
+                <p>¿Estás seguro de que quieres eliminar al prospecto <strong>"{{ prospecto.nombre_completo }}"</strong>?</p>
+                <p>Esta acción no se puede deshacer.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Sí, Eliminar</button>
+                    <a href="{% url 'prospecto-detail' prospecto.pk %}" class="btn btn-secondary">Cancelar</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

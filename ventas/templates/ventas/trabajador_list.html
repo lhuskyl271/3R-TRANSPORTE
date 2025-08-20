@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de Trabajadores{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Gestión de Vendedores</h1>
+    <a href="{% url 'trabajador-create' %}" class="btn btn-primary"><i class="fas fa-plus me-2"></i> Nuevo Vendedor</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Puesto</th>
+                    <th>Email</th>
+                    <th>Teléfono</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for trabajador in trabajadores %}
+                <tr>
+                    <td>{{ trabajador.nombre }}</td>
+                    <td>{{ trabajador.puesto|default:"-" }}</td>
+                    <td>{{ trabajador.email|default:"-" }}</td>
+                    <td>{{ trabajador.telefono|default:"-" }}</td>
+                    <td class="text-end">
+                        <a href="{% url 'trabajador-update' trabajador.pk %}" class="btn btn-sm btn-warning">Editar</a>
+                        <a href="{% url 'trabajador-delete' trabajador.pk %}" class="btn btn-sm btn-danger">Eliminar</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center">No hay trabajadores registrados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
