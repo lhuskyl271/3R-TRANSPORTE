@@ -18,6 +18,7 @@ from openpyxl.styles import Font, Alignment
 from django.utils import timezone
 import json
 from datetime import timedelta
+import pytz 
 
 # ==============================================================================
 # MIXINS Y VISTAS BASE
@@ -52,46 +53,62 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         user = self.request.user
         
+        # --- AJUSTE DE ZONA HORARIA PARA MÉXICO ---
+        try:
+            # Se establece la zona horaria central de México.
+            user_timezone = pytz.timezone('America/Mexico_City') 
+        except pytz.UnknownTimeZoneError:
+            # Si hay un error, se usa la zona horaria por defecto del servidor.
+            user_timezone = pytz.timezone(timezone.get_default_timezone_name())
+
+        # Se obtiene la hora actual convertida a la zona horaria correcta.
+        hoy = timezone.now().astimezone(user_timezone)
+        
+        # --- QUERIES PARA LOS DATOS DEL DASHBOARD ---
+
+        # Filtro base de prospectos según el tipo de usuario.
         prospectos_qs = Prospecto.objects.all()
         if not user.is_superuser:
             prospectos_qs = prospectos_qs.filter(asignado_a=user)
 
+        # KPIs principales.
         context['total_prospectos'] = prospectos_qs.count()
         context['prospectos_nuevos'] = prospectos_qs.filter(estado=Prospecto.Estado.NUEVO).count()
         context['clientes_ganados'] = prospectos_qs.filter(estado=Prospecto.Estado.GANADO).count()
         
+        # Datos para el gráfico de pastel.
         reporte_data = prospectos_qs.values('estado').annotate(total=Count('estado')).order_by('estado')
-        
-        # ✅ CORRECCIÓN: Usar la clase interna `Estado.choices` del modelo.
         estado_display_map = dict(Prospecto.Estado.choices) 
-        
         chart_data = {
             "labels": [estado_display_map.get(item['estado'], item['estado']) for item in reporte_data],
             "data": [item['total'] for item in reporte_data],
         }
         context['chart_data_json'] = json.dumps(chart_data)
         
+        # Calificación promedio por trabajador.
         promedio_calificaciones = ProspectoTrabajador.objects.filter(
             prospecto__in=prospectos_qs
         ).values('trabajador__nombre').annotate(promedio=Avg('calificacion')).order_by('-promedio')
         context['promedio_calificaciones_trabajador'] = promedio_calificaciones
 
-        thirty_days_ago = timezone.now() - timedelta(days=30)
+        # Prospectos inactivos que requieren seguimiento.
+        thirty_days_ago = hoy - timedelta(days=30)
         prospectos_activos_ids = Interaccion.objects.filter(
             prospecto__in=prospectos_qs, fecha__gte=thirty_days_ago
         ).values_list('prospecto_id', flat=True).distinct()
 
         prospectos_inactivos = prospectos_qs.exclude(
-            Q(estado__in=[Prospecto.Estado.GANADO, Prospecto.Estado.PERDIDO]) | Q(id__in=prospectos_activos_ids)
+            Q(estado__in=[Prospecto.Estado.GANADO, Prospecto.Estado.PERIDO]) | Q(id__in=prospectos_activos_ids)
         ).annotate(
             ultima_interaccion=Max('interacciones__fecha')
         ).filter(
             Q(ultima_interaccion__lt=thirty_days_ago) | Q(ultima_interaccion__isnull=True, fecha_creacion__lt=thirty_days_ago)
         ).order_by('ultima_interaccion')
+        
         context['prospectos_inactivos'] = prospectos_inactivos
         context['seguimiento_requerido_count'] = prospectos_inactivos.count()
 
-        hoy = timezone.now()
+        # Recordatorios próximos (usando la hora local correcta).
         quince_dias_despues = hoy + timedelta(days=15)
         recordatorios_proximos = Recordatorio.objects.filter(
             prospecto__in=prospectos_qs, completado=False, 
@@ -100,6 +117,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context['recordatorios_proximos'] = recordatorios_proximos
         
         return context
+
 
 class ProspectoListView(LoginRequiredMixin, ListView):
     model = Prospecto

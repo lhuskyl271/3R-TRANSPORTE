@@ -133,7 +133,8 @@
                     <small class="text-muted">
                         Para: <a href="{{ recordatorio.prospecto.get_absolute_url }}">{{ recordatorio.prospecto.nombre_completo }}</a>
                     </small>
-                    <span class="badge bg-warning float-end">{{ recordatorio.fecha_recordatorio|date:"d M, Y" }}</span>
+                    <span class="badge bg-warning float-end">{{ recordatorio.fecha_recordatorio|date:"d M, Y, g:i a" }}</span>
+
                 </div>
                 {% empty %}
                 <p class="text-muted text-center">No hay recordatorios próximos.</p>
