@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy, reverse
 from .models import Prospecto, Interaccion, Recordatorio, Etiqueta, Trabajador, ProspectoTrabajador
 from .forms import (
-    ProspectoForm, InteraccionForm, RecordatorioForm, TrabajadorForm, ProspectoTrabajadorForm
+    ProspectoForm, InteraccionForm, RecordatorioForm, TrabajadorForm, ProspectoTrabajadorForm, ProspectoTrabajadorUpdateForm 
 )
 from django.db.models import Count, Q, Avg, Max
 from django.http import HttpResponseForbidden, HttpResponse
@@ -405,22 +405,18 @@ def add_trabajador_a_prospecto(request, prospecto_pk):
 
 class ProspectoTrabajadorUpdateView(LoginRequiredMixin, UpdateView):
     model = ProspectoTrabajador
-    form_class = ProspectoTrabajadorForm
-    template_name = 'ventas/prospecto_trabajador_form.html' # Nuevo template
-
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class)
-        # Hacemos el campo de trabajador de solo lectura, solo se puede cambiar la calificación
-        form.fields['trabajador'].widget.attrs['disabled'] = True
-        return form
+    form_class = ProspectoTrabajadorUpdateForm # <= USA EL NUEVO FORMULARIO
+    template_name = 'ventas/prospecto_trabajador_form.html'
 
     def get_success_url(self):
+        messages.success(self.request, f"Se actualizó la calificación para el trabajador '{self.object.trabajador.nombre}'.")
         return reverse('prospecto-detail', kwargs={'pk': self.object.prospecto.pk})
 
 
 class ProspectoTrabajadorDeleteView(LoginRequiredMixin, DeleteView):
+    # ... (esta vista se queda igual) ...
     model = ProspectoTrabajador
-    template_name = 'ventas/prospecto_trabajador_confirm_delete.html' # Nuevo template
+    template_name = 'ventas/prospecto_trabajador_confirm_delete.html'
     
     def get_success_url(self):
         return reverse('prospecto-detail', kwargs={'pk': self.object.prospecto.pk})

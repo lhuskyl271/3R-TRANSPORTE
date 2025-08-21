@@ -39,6 +39,18 @@ class ProspectoTrabajadorForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['calificacion'].required = True
+        
+class ProspectoTrabajadorUpdateForm(forms.ModelForm):
+    class Meta:
+        model = ProspectoTrabajador
+        fields = ['calificacion'] # Solo incluimos el campo que se puede editar
+        widgets = {
+            'calificacion': forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['calificacion'].required = True
 
 
 # ... (El resto de los formularios: TrabajadorForm, InteraccionForm, etc. se quedan igual)
