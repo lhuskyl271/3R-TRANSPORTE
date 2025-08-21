@@ -80,5 +80,11 @@ class RecordatorioForm(forms.ModelForm):
         fields = ['titulo', 'fecha_recordatorio']
         widgets = {
             'titulo': forms.TextInput(attrs={'class': 'form-control mb-2', 'placeholder': 'Título del recordatorio'}),
-            'fecha_recordatorio': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            
+            # --- LÍNEA MODIFICADA ---
+            # Añade el argumento 'format' para que coincida con el input HTML
+            'fecha_recordatorio': forms.DateTimeInput(
+                attrs={'class': 'form-control', 'type': 'datetime-local'},
+                format='%Y-%m-%dT%H:%M'
+            ),
         }
