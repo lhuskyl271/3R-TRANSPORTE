@@ -25,12 +25,3 @@ class VentasConfig(AppConfig):
             # Este error ocurre si las tablas aún no han sido creadas (durante migrate)
             # Simplemente lo ignoramos para permitir que la migración continúe.
             pass
-        
-class MyAppConfig(AppConfig):
-    name = 'my_app'
-
-    def ready(self):
-        from .models import SomeModel
-        # This query runs during startup, causing the warning
-        if SomeModel.objects.exists():
-            print("Model exists.")
