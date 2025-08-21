@@ -131,7 +131,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         }
         context['chart_data_json'] = json.dumps(chart_data)
         
-        # ... (el resto de la vista se mantiene igual) ...
+        # ... (el resto del código de la vista se mantiene igual)
         promedio_calificaciones = ProspectoTrabajador.objects.filter(
             prospecto__in=prospectos_qs
         ).values(
@@ -173,6 +173,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context['recordatorios_proximos'] = recordatorios_proximos
         
         return context
+
 
 
 class ProspectoListView(LoginRequiredMixin, ListView):
