@@ -6,14 +6,13 @@ class VentasConfig(AppConfig):
 
     def ready(self):
         """
-        This method is called when Django's app registry is fully populated.
-        It's the correct place to import models and run setup code, like
-        creating a superuser.
+        This method is called only after Django's app registry is fully loaded.
+        It is the correct place for model imports and startup code.
         """
-        # Import models here to avoid AppRegistryNotReady error
+        # Import models here to avoid the AppRegistryNotReady error
         from django.contrib.auth.models import User
 
-        # Create superuser automatically only if it doesn't exist
+        # Create the superuser only if it doesn't already exist
         if not User.objects.filter(username="admin").exists():
             User.objects.create_superuser(
                 "admin", 
