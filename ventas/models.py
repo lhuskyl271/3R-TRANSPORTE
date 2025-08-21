@@ -10,6 +10,10 @@ class Trabajador(models.Model):
     email = models.EmailField(blank=True, verbose_name="Email")
     telefono = models.CharField(max_length=20, blank=True, verbose_name="Teléfono")
 
+    # --- CORRECCIÓN 2: AÑADIR ORDENAMIENTO POR DEFECTO ---
+    class Meta:
+        ordering = ['nombre']
+
     def __str__(self):
         return self.nombre
     
@@ -67,9 +71,16 @@ class Prospecto(models.Model):
     )
     
     asignado_a = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='prospectos')
+    
+    # --- CORRECCIÓN 1: USAR timezone.now SIN PARÉNTESIS ---
     fecha_creacion = models.DateTimeField(default=timezone.now)
+    
     fecha_actualizacion = models.DateTimeField(auto_now=True)
     
+    # --- CORRECCIÓN 2: AÑADIR ORDENAMIENTO POR DEFECTO ---
+    class Meta:
+        ordering = ['-fecha_creacion']
+
     def __str__(self):
         return self.nombre_completo
 
@@ -111,7 +122,10 @@ class Interaccion(models.Model):
     TIPO_CHOICES = [('LLAMADA', 'Llamada'), ('CORREO', 'Correo'), ('REUNION', 'Reunión'), ('OTRO', 'Otro')]
     prospecto = models.ForeignKey(Prospecto, on_delete=models.CASCADE, related_name='interacciones')
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    
+    # --- CORRECCIÓN 1: USAR timezone.now SIN PARÉNTESIS ---
     fecha = models.DateTimeField(default=timezone.now)
+    
     notas = models.TextField()
     creado_por = models.ForeignKey(User, on_delete=models.CASCADE, related_name='interacciones_creadas')
     
