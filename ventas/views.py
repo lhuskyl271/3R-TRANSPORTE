@@ -113,40 +113,35 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         user = self.request.user
         
-        # QuerySet base de prospectos, filtrado por usuario si no es superuser
         prospectos_qs = Prospecto.objects.filter(asignado_a=user) if not user.is_superuser else Prospecto.objects.all()
 
-        # 1. --- MÉTRICAS PRINCIPALES (KPIs) ---
-        total_prospectos = prospectos_qs.count()
-        context['total_prospectos'] = total_prospectos
+        context['total_prospectos'] = prospectos_qs.count()
         context['prospectos_nuevos'] = prospectos_qs.filter(estado='NUEVO').count()
         context['clientes_ganados'] = prospectos_qs.filter(estado='GANADO').count()
         
-        # 2. --- DATOS PARA GRÁFICO DE PASTEL (PROSPECTOS POR ESTADO) ---
         reporte_data = prospectos_qs.values('estado').annotate(total=Count('estado')).order_by('estado')
-        estado_display_map = dict(Prospecto.ESTADO_CHOICES)
+        
+        # --- ✅ CORRECCIÓN AQUÍ ---
+        # Usamos la nueva clase `Estado` del modelo Prospecto para obtener los nombres
+        estado_display_map = dict(Prospecto.Estado.choices) 
         
         chart_data = {
             "labels": [estado_display_map.get(item['estado'], item['estado']) for item in reporte_data],
             "data": [item['total'] for item in reporte_data],
         }
-        # Pasamos los datos como un string JSON para ser usado por JavaScript
         context['chart_data_json'] = json.dumps(chart_data)
-        context['reporte_estatus'] = reporte_data # Mantenemos por si se usa en otro lado
-
-        # 3. --- PROMEDIO DE CALIFICACIÓN POR TRABAJADOR ---
+        
+        # ... (el resto de la vista se mantiene igual) ...
         promedio_calificaciones = ProspectoTrabajador.objects.filter(
             prospecto__in=prospectos_qs
         ).values(
-            'trabajador__nombre' # Agrupamos por nombre de trabajador
+            'trabajador__nombre'
         ).annotate(
-            promedio=Avg('calificacion') # Calculamos el promedio
-        ).order_by('-promedio') # Ordenamos de mejor a peor
+            promedio=Avg('calificacion')
+        ).order_by('-promedio')
         
         context['promedio_calificaciones_trabajador'] = promedio_calificaciones
 
-        # 4. --- PROSPECTOS QUE REQUIEREN SEGUIMIENTO (30+ DÍAS INACTIVOS) ---
-        # La lógica ya excluía 'GANADO' y 'PERDIDO', así que está correcta.
         thirty_days_ago = timezone.now() - timedelta(days=30)
         
         prospectos_activos_ids = Interaccion.objects.filter(
@@ -165,7 +160,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context['prospectos_inactivos'] = prospectos_inactivos
         context['seguimiento_requerido_count'] = prospectos_inactivos.count()
 
-        # 5. --- RECORDATORIOS PRÓXIMOS (PRÓXIMOS 15 DÍAS) ---
         hoy = timezone.now()
         quince_dias_despues = hoy + timedelta(days=15)
         
@@ -179,6 +173,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context['recordatorios_proximos'] = recordatorios_proximos
         
         return context
+
 
 class ProspectoListView(LoginRequiredMixin, ListView):
     model = Prospecto
@@ -208,15 +203,21 @@ class ProspectoListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        global_qs = Prospecto.objects.all()
         
+        # Usamos el queryset base de la vista para los conteos, respetando permisos
+        base_qs = self.get_queryset().model.objects.all()
+        if not self.request.user.is_superuser:
+            base_qs = base_qs.filter(asignado_a=self.request.user)
+
         status_counts_dict = {
             item['estado']: item['total'] 
-            for item in global_qs.values('estado').annotate(total=Count('id'))
+            for item in base_qs.values('estado').annotate(total=Count('id'))
         }
 
         status_cards_data = []
-        for value, name in Prospecto.ESTADO_CHOICES:
+        # --- ✅ CORRECCIÓN AQUÍ ---
+        # Iteramos sobre la nueva clase `Estado.choices`
+        for value, name in Prospecto.Estado.choices:
             status_cards_data.append({
                 'value': value,
                 'name': name,
@@ -224,7 +225,7 @@ class ProspectoListView(LoginRequiredMixin, ListView):
             })
 
         context['status_cards'] = status_cards_data
-        context['total_prospectos_global'] = global_qs.count()
+        context['total_prospectos_global'] = base_qs.count()
         
         return context
 
