@@ -1,4 +1,6 @@
 from django.apps import AppConfig
+# Importamos el error específico que queremos atrapar
+from django.db.utils import ProgrammingError
 
 class VentasConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
@@ -6,16 +8,20 @@ class VentasConfig(AppConfig):
 
     def ready(self):
         """
-        This method is called only after Django's app registry is fully loaded.
-        It is the correct place for model imports and startup code.
+        Este método se ejecuta cuando las apps de Django están listas.
         """
-        # Import models here to avoid the AppRegistryNotReady error
-        from django.contrib.auth.models import User
+        try:
+            # Se importa el modelo aquí para evitar errores de carga
+            from django.contrib.auth.models import User
 
-        # Create the superuser only if it doesn't already exist
-        if not User.objects.filter(username="admin").exists():
-            User.objects.create_superuser(
-                "admin", 
-                "admin@example.com", 
-                "nitram"
-            )
+            # Se crea el superusuario solo si no existe
+            if not User.objects.filter(username="admin").exists():
+                User.objects.create_superuser(
+                    "admin",
+                    "admin@example.com",
+                    "nitram"
+                )
+        except ProgrammingError:
+            # Este error ocurre si las tablas aún no han sido creadas (durante migrate)
+            # Simplemente lo ignoramos para permitir que la migración continúe.
+            pass
