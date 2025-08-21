@@ -100,7 +100,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         prospectos_inactivos = prospectos_qs.exclude(
             Q(estado__in=[Prospecto.Estado.GANADO, Prospecto.Estado.PERDIDO]) | Q(id__in=prospectos_activos_ids)
         ).annotate(
-            ultima_interaccion=Max('interacciones__fecha')
+            ultima_interaccion=Max('interacciones__fechait a')
         ).filter(
             Q(ultima_interaccion__lt=thirty_days_ago) | Q(ultima_interaccion__isnull=True, fecha_creacion__lt=thirty_days_ago)
         ).order_by('ultima_interaccion')
