@@ -56,4 +56,6 @@ urlpatterns = [
     # --- NUEVAS RUTAS PARA EDITAR/ELIMINAR LA RELACIÓN ---
     path('prospecto-trabajador/<int:pk>/editar/', ProspectoTrabajadorUpdateView.as_view(), name='prospecto-trabajador-update'),
     path('prospecto-trabajador/<int:pk>/eliminar/', ProspectoTrabajadorDeleteView.as_view(), name='prospecto-trabajador-delete'),
+
+
 ]

@@ -59,6 +59,14 @@
     .recordatorio-item:last-child {
         border-bottom: none;
     }
+    .recordatorio-pasado {
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+    }
+    .btn-completar-recordatorio {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
 </style>
 
 <div class="page-header">
@@ -84,6 +92,7 @@
                 <div>
                     <h5 class="card-title">PROSPECTOS NUEVOS</h5>
                     <div class="kpi-value">{{ prospectos_nuevos }}</div>
+                    <small class="text-muted">(Últimos 15 días)</small>
                 </div>
                 <div class="kpi-icon"><i class="fas fa-user-plus"></i></div>
             </div>
@@ -114,8 +123,9 @@
 </div>
 
 <div class="row">
-    <!-- Gráfico de Pastel -->
+    <!-- Columna izquierda -->
     <div class="col-lg-6">
+        <!-- Gráfico de Pastel -->
         <div class="card mb-4">
             <div class="card-header">Distribución de Prospectos por Estado</div>
             <div class="chart-container">
@@ -134,7 +144,6 @@
                         Para: <a href="{{ recordatorio.prospecto.get_absolute_url }}">{{ recordatorio.prospecto.nombre_completo }}</a>
                     </small>
                     <span class="badge bg-warning float-end">{{ recordatorio.fecha_recordatorio|date:"d M, Y, g:i a" }}</span>
-
                 </div>
                 {% empty %}
                 <p class="text-muted text-center">No hay recordatorios próximos.</p>
@@ -143,6 +152,7 @@
         </div>
     </div>
 
+    <!-- Columna derecha -->
     <div class="col-lg-6">
         <!-- Calificación Promedio por Vendedor -->
         <div class="card mb-4">
@@ -205,6 +215,39 @@
                 </table>
             </div>
         </div>
+
+        <!-- NUEVA SECCIÓN: Recordatorios Programados Pasados -->
+        <div class="card mb-4">
+            <div class="card-header bg-warning text-dark">Recordatorios Programados Pasados</div>
+            <div class="card-body">
+                {% for recordatorio in recordatorios_pasados %}
+                <div class="recordatorio-item recordatorio-pasado p-3 mb-2 rounded">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <strong>{{ recordatorio.titulo }}</strong><br>
+                            <small class="text-muted">
+                                Para: <a href="{{ recordatorio.prospecto.get_absolute_url }}">{{ recordatorio.prospecto.nombre_completo }}</a>
+                            </small><br>
+                            <small class="text-danger">
+                                <i class="fas fa-clock"></i> 
+                                {{ recordatorio.fecha_recordatorio|date:"d M, Y, g:i a" }}
+                            </small>
+                        </div>
+                        <div class="ms-2">
+                            <form method="post" action="{% url 'toggle-recordatorio' recordatorio.pk %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success btn-sm btn-completar-recordatorio">
+                                    <i class="fas fa-check"></i> Completar
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center">No hay recordatorios pasados pendientes.</p>
+                {% endfor %}
+            </div>
+        </div>
     </div>
 </div>
 
@@ -260,7 +303,6 @@ document.addEventListener("DOMContentLoaded", function() {
                             }
                         }
                     },
-                    // --- NUEVA CONFIGURACIÓN PARA MOSTRAR PORCENTAJES ---
                     datalabels: {
                         formatter: (value, ctx) => {
                             const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
@@ -272,7 +314,6 @@ document.addEventListener("DOMContentLoaded", function() {
                             weight: 'bold',
                             size: 14,
                         },
-                        // Añadir una pequeña sombra para mejorar la legibilidad
                         textStrokeColor: 'black',
                         textStrokeWidth: 1
                     }
@@ -280,7 +321,6 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         });
     } else {
-        // Mostrar mensaje si no hay datos
         const container = document.querySelector('.chart-container');
         container.innerHTML = '<p class="text-muted text-center mt-5">No hay datos de prospectos para mostrar en el gráfico.</p>';
         container.style.height = 'auto';
