@@ -120,6 +120,30 @@
         transform: scale(1.1);
     }
     
+    /* Estilo para enlace de teléfono */
+    .phone-link {
+        color: inherit;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    
+    .phone-link:hover {
+        color: var(--primary-color);
+        text-decoration: underline;
+    }
+    
+    .phone-wrapper {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem;
+        border-radius: var(--border-radius);
+        transition: all 0.2s ease;
+    }
+    
+    .phone-wrapper:hover {
+        background-color: rgba(52, 152, 219, 0.1);
+    }
+    
     /* Estilos responsive para móviles */
     @media (max-width: 768px) {
         .prospecto-header {
@@ -200,6 +224,25 @@
         .dropdown-toggle {
             padding: 0.25rem 0.5rem;
         }
+        
+        /* Estilos específicos para enlace de teléfono en móviles */
+        .phone-link {
+            display: block;
+            padding: 0.75rem;
+            background-color: var(--primary-color);
+            color: white !important;
+            border-radius: var(--border-radius);
+            text-align: center;
+            font-weight: bold;
+            margin-top: 0.5rem;
+            text-decoration: none;
+        }
+        
+        .phone-link:hover {
+            background-color: var(--secondary-color);
+            color: white;
+            text-decoration: none;
+        }
     }
 </style>
 
@@ -241,7 +284,18 @@
                         <i class="fas fa-phone me-3 text-primary"></i>
                         <div>
                             <small class="text-muted">Teléfono</small>
-                            <p class="mb-0">{{ prospecto.telefono|default:"No especificado" }}</p>
+                            {% if prospecto.telefono %}
+                                <p class="mb-0">
+                                    <a href="tel:{{ prospecto.telefono }}" class="phone-link">
+                                        <div class="phone-wrapper">
+                                            <i class="fas fa-phone-alt me-2"></i>
+                                            {{ prospecto.telefono }}
+                                        </div>
+                                    </a>
+                                </p>
+                            {% else %}
+                                <p class="mb-0 text-muted">No especificado</p>
+                            {% endif %}
                         </div>
                     </div>
                     

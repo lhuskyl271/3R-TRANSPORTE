@@ -75,7 +75,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context['total_prospectos'] = prospectos_qs.count()
         
         # CAMBIO: Prospectos nuevos (menos de 20 días en lugar de 15)
-        veinte_dias_atras = hoy - timedelta(days=20)  # Cambiado de 15 a 20 días
+        veinte_dias_atras = hoy - timedelta(days=15)  # Cambiado de 15 a 20 días
         context['prospectos_nuevos'] = prospectos_qs.filter(
             estado=Prospecto.Estado.NUEVO,
             fecha_creacion__gte=veinte_dias_atras
@@ -131,7 +131,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         ).select_related('prospecto').order_by('fecha_recordatorio')
         context['recordatorios_pasados'] = recordatorios_pasados
         
-        return context
+        return context/r
 
 
 class ProspectoListView(LoginRequiredMixin, ListView):
