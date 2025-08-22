@@ -19,9 +19,9 @@
     .prospecto-header {
         background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
         color: white;
-        padding: 2rem;
+        padding: 1.5rem 1rem;
         border-radius: var(--border-radius);
-        margin-bottom: 2rem;
+        margin-bottom: 1.5rem;
         box-shadow: var(--card-shadow);
     }
     
@@ -29,6 +29,7 @@
         color: white;
         font-weight: 700;
         margin-bottom: 0.5rem;
+        font-size: 1.8rem;
     }
     
     .status-badge {
@@ -117,6 +118,88 @@
     
     .action-btn:hover {
         transform: scale(1.1);
+    }
+    
+    /* Estilos responsive para móviles */
+    @media (max-width: 768px) {
+        .prospecto-header {
+            padding: 1rem;
+            text-align: center;
+        }
+        
+        .prospecto-header h1 {
+            font-size: 1.5rem;
+        }
+        
+        .btn-group {
+            width: 100%;
+            justify-content: center;
+            margin-top: 1rem !important;
+        }
+        
+        .btn-group .btn {
+            margin: 0 0.25rem;
+        }
+        
+        .interest-highlight {
+            padding: 1rem;
+        }
+        
+        .nav-tabs .nav-link {
+            font-size: 0.8rem;
+            padding: 0.5rem;
+        }
+        
+        .nav-tabs .nav-link i {
+            margin-right: 0.25rem;
+        }
+        
+        .reminder-item {
+            padding: 0.75rem;
+        }
+        
+        .reminder-actions {
+            display: flex;
+            flex-wrap: wrap;
+            margin-top: 0.5rem;
+        }
+        
+        .reminder-actions .btn {
+            margin: 0.25rem;
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+        }
+        
+        .reminder-content {
+            width: 100%;
+        }
+        
+        .card-body {
+            padding: 1rem;
+        }
+        
+        .tab-pane {
+            padding: 1rem !important;
+        }
+        
+        .list-group-item {
+            padding: 0.75rem;
+        }
+        
+        .contact-avatar {
+            width: 35px;
+            height: 35px;
+            margin-right: 0.75rem;
+            font-size: 0.9rem;
+        }
+        
+        .rating-stars {
+            font-size: 0.9rem;
+        }
+        
+        .dropdown-toggle {
+            padding: 0.25rem 0.5rem;
+        }
     }
 </style>
 
@@ -391,8 +474,8 @@
                             <div class="list-group">
                                 {% for recordatorio in recordatorios %}
                                 <div class="list-group-item reminder-item {% if recordatorio.completado %}completed{% endif %}">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div class="flex-grow-1">
+                                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start">
+                                        <div class="reminder-content flex-grow-1 mb-2 mb-md-0">
                                             <div class="d-flex justify-content-between align-items-center mb-1">
                                                 <h6 class="mb-0 {% if recordatorio.completado %}text-muted text-decoration-line-through{% endif %}">
                                                     {{ recordatorio.titulo }}
@@ -413,7 +496,7 @@
                                                 {{ recordatorio.fecha_recordatorio|date:"d M Y H:i" }}
                                             </small>
                                         </div>
-                                        <div class="d-flex ms-3">
+                                        <div class="reminder-actions d-flex ms-md-3">
                                             <a href="{% url 'toggle-recordatorio' recordatorio.pk %}" class="btn btn-sm {% if recordatorio.completado %}btn-outline-secondary{% else %}btn-outline-success{% endif %} me-1 action-btn" title="{% if recordatorio.completado %}Reactivar{% else %}Completar{% endif %}">
                                                 {% if recordatorio.completado %}
                                                     <i class="fas fa-undo"></i>

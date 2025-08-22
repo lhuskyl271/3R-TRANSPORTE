@@ -92,7 +92,7 @@
                 <div>
                     <h5 class="card-title">PROSPECTOS NUEVOS</h5>
                     <div class="kpi-value">{{ prospectos_nuevos }}</div>
-                    <small class="text-muted">(Últimos 15 días)</small>
+                    <small class="text-muted"></small>
                 </div>
                 <div class="kpi-icon"><i class="fas fa-user-plus"></i></div>
             </div>
@@ -216,9 +216,9 @@
             </div>
         </div>
 
-        <!-- NUEVA SECCIÓN: Recordatorios Programados Pasados -->
+        <!-- NUEVA SECCIÓN: Recordatorios Programados Vencidos -->
         <div class="card mb-4">
-            <div class="card-header bg-warning text-dark">Recordatorios Programados Pasados</div>
+            <div class="card-header bg-warning text-withe">Recordatorios Programados Pasados</div>
             <div class="card-body">
                 {% for recordatorio in recordatorios_pasados %}
                 <div class="recordatorio-item recordatorio-pasado p-3 mb-2 rounded">
