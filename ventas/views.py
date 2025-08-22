@@ -74,11 +74,11 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         # KPIs principales.
         context['total_prospectos'] = prospectos_qs.count()
         
-        # Prospectos nuevos (menos de 15 días)
-        quince_dias_atras = hoy - timedelta(days=15)
+        # CAMBIO: Prospectos nuevos (menos de 20 días en lugar de 15)
+        veinte_dias_atras = hoy - timedelta(days=20)  # Cambiado de 15 a 20 días
         context['prospectos_nuevos'] = prospectos_qs.filter(
             estado=Prospecto.Estado.NUEVO,
-            fecha_creacion__gte=quince_dias_atras
+            fecha_creacion__gte=veinte_dias_atras
         ).count()
         
         context['clientes_ganados'] = prospectos_qs.filter(estado=Prospecto.Estado.GANADO).count()
