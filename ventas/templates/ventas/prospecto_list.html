@@ -26,10 +26,10 @@
     .prospectos-container {
         display: flex;
         flex-direction: column;
-        gap: clamp(1.75rem, 3.5vw, 3rem);
+        gap: clamp(1.25rem, 3vw, 2rem);
         max-width: 1800px;
         margin: 0 auto;
-        padding: 0 clamp(1rem, 3vw, 2rem);
+        padding: 0 clamp(0.75rem, 2vw, 1.5rem);
     }
 
     /* Header ejecutivo mejorado */
@@ -38,13 +38,13 @@
         justify-content: space-between;
         align-items: center;
         flex-wrap: wrap;
-        gap: 1.5rem;
-        padding-bottom: clamp(1rem, 2vw, 1.5rem);
+        gap: 1rem;
+        padding-bottom: clamp(0.75rem, 1.5vw, 1.25rem);
         border-bottom: 1px solid var(--border-color);
     }
 
     .page-header h1 {
-        font-size: clamp(1.75rem, 3vw, 2.5rem);
+        font-size: clamp(1.5rem, 2.5vw, 2.25rem);
         font-weight: 700;
         color: var(--text-primary);
         margin: 0;
@@ -53,14 +53,15 @@
     }
 
     .page-header .btn {
-        font-size: clamp(0.95rem, 1.15vw, 1.1rem);
-        padding: clamp(0.6rem, 1.1vw, 0.8rem) clamp(1.25rem, 1.75vw, 1.75rem);
+        font-size: clamp(0.85rem, 1vw, 1rem);
+        padding: clamp(0.5rem, 1vw, 0.75rem) clamp(1rem, 1.5vw, 1.5rem);
         border-radius: 50px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
         background-color: var(--primary-color);
         color: white;
         border: none;
+        white-space: nowrap;
     }
 
     .page-header .btn:hover {
@@ -72,13 +73,13 @@
     /* Tarjetas de métricas premium mejoradas */
     .status-cards-container {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
-        gap: clamp(1rem, 1.75vw, 1.5rem);
-        margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+        gap: clamp(0.75rem, 1.5vw, 1.25rem);
+        margin-bottom: clamp(1.25rem, 2.5vw, 2rem);
     }
     
     .status-card {
-        padding: clamp(1.25rem, 2vw, 1.75rem) clamp(1rem, 1.5vw, 1.5rem);
+        padding: clamp(1rem, 1.75vw, 1.5rem) clamp(0.75rem, 1.25vw, 1.25rem);
         border-radius: var(--border-radius-xl);
         color: white;
         background: linear-gradient(145deg, var(--card-color) 0%, var(--card-color-dark) 100%);
@@ -206,7 +207,7 @@
         align-items: center;
         flex-wrap: wrap;
         gap: 1rem;
-        padding: clamp(1rem, 1.5vw, 1.5rem);
+        padding: clamp(0.75rem, 1.25vw, 1.25rem);
         background: var(--hover-bg);
         border-bottom: 1px solid var(--border-color);
     }
@@ -215,16 +216,17 @@
     .search-form {
         position: relative;
         flex-grow: 1;
-        min-width: 250px;
-        max-width: 400px;
+        min-width: 200px;
+        max-width: 100%;
     }
 
     .search-form .form-control {
-        padding-left: 3.25rem;
+        padding-left: 3rem;
+        padding-right: 1rem;
         border-radius: 50px;
         border: 1px solid var(--border-color);
-        height: 50px;
-        font-size: 0.95rem;
+        height: 46px;
+        font-size: 0.9rem;
         transition: all 0.3s ease;
         box-shadow: none;
         background-color: var(--card-bg);
@@ -243,15 +245,16 @@
 
     .search-form .btn-search {
         position: absolute;
-        left: 1.25rem;
+        left: 1rem;
         top: 50%;
         transform: translateY(-50%);
         background: transparent;
         border: none;
         color: var(--text-secondary);
         z-index: 4;
-        font-size: 1.1rem;
+        font-size: 1rem;
         opacity: 0.7;
+        padding: 0;
     }
 
     /* Botón de exportar mejorado */
@@ -259,15 +262,16 @@
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
-        padding: 0.6rem 1.25rem;
+        padding: 0.5rem 1rem;
         border-radius: 50px;
         background: var(--card-bg);
         color: var(--text-primary);
         border: 1px solid var(--border-color);
         transition: all 0.2s ease;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         font-weight: 500;
         text-decoration: none;
+        white-space: nowrap;
     }
 
     .export-btn:hover {
@@ -278,6 +282,12 @@
     }
 
     /* Tabla ejecutiva mejorada */
+    .table-container {
+        overflow-x: auto;
+        width: 100%;
+        -webkit-overflow-scrolling: touch;
+    }
+
     .table {
         margin-bottom: 0;
         font-size: var(--table-font-size);
@@ -285,6 +295,7 @@
         border-collapse: separate;
         border-spacing: 0;
         color: var(--text-primary);
+        min-width: 700px; /* Ancho mínimo para mantener la estructura */
     }
 
     .table thead th {
@@ -294,19 +305,20 @@
         letter-spacing: 0.5px;
         background-color: var(--primary-color);
         color: white;
-        padding: clamp(1rem, 1.25vw, 1.25rem);
+        padding: clamp(0.75rem, 1vw, 1rem);
         vertical-align: middle;
         position: sticky;
-        top: 0;
-        z-index: 10;
+        left: 0;
+        white-space: nowrap;
     }
 
     .table tbody td {
-        padding: clamp(1rem, 1.25vw, 1.25rem);
+        padding: clamp(0.75rem, 1vw, 1rem);
         vertical-align: middle;
         border-top: 1px solid var(--border-color);
         background: var(--card-bg);
         color: var(--text-primary);
+        white-space: nowrap;
     }
 
     .table tbody tr:not(:last-child) td {
@@ -320,17 +332,19 @@
     /* Badges mejorados */
     .badge {
         font-weight: 500;
-        padding: 0.5em 0.9em;
+        padding: 0.4em 0.8em;
         font-size: 0.75em;
         letter-spacing: 0.3px;
         border-radius: 50px;
+        white-space: nowrap;
     }
 
     /* Botones de acción premium mejorados */
     .action-btns {
         display: flex;
-        gap: 0.75rem;
+        gap: 0.5rem;
         justify-content: center;
+        flex-wrap: wrap;
     }
 
     .btn-action {
@@ -345,6 +359,7 @@
         box-shadow: 0 2px 6px rgba(0,0,0,0.08);
         border: none;
         color: white;
+        flex-shrink: 0;
     }
 
     .btn-action.btn-info {
@@ -372,39 +387,41 @@
 
     /* Mensaje de tabla vacía mejorado */
     .empty-table-message {
-        padding: 3rem;
+        padding: 2rem 1rem;
         text-align: center;
         color: var(--text-secondary);
     }
 
     .empty-table-message i {
-        font-size: 2.5rem;
-        margin-bottom: 1.5rem;
+        font-size: 2rem;
+        margin-bottom: 1rem;
         color: var(--secondary-color);
         opacity: 0.5;
     }
 
     .empty-table-message .empty-title {
-        font-size: 1.2rem;
+        font-size: 1.1rem;
         font-weight: 500;
         margin-bottom: 0.5rem;
         color: var(--text-primary);
     }
 
     .empty-table-message .empty-subtitle {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         color: var(--text-secondary);
     }
 
     /* Paginación premium mejorada */
     .pagination-container {
-        padding: clamp(1rem, 1.5vw, 1.5rem);
+        padding: clamp(0.75rem, 1.25vw, 1.25rem);
         border-top: 1px solid var(--border-color);
         background: var(--hover-bg);
     }
 
     .pagination {
-        gap: 0.5rem;
+        gap: 0.25rem;
+        flex-wrap: wrap;
+        justify-content: center;
     }
 
     .page-item.active .page-link {
@@ -415,11 +432,11 @@
 
     .page-link {
         color: var(--text-primary);
-        padding: 0.5rem 0.9rem;
+        padding: 0.4rem 0.75rem;
         border-radius: 8px !important;
         border: 1px solid var(--border-color);
-        font-size: 0.9rem;
-        min-width: 40px;
+        font-size: 0.85rem;
+        min-width: 36px;
         text-align: center;
         transition: all 0.2s ease;
         background-color: var(--card-bg);
@@ -431,6 +448,86 @@
         color: var(--text-primary);
     }
 
+    /* Vista de tarjetas para móviles */
+    .mobile-cards-view {
+        display: none;
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .prospecto-card {
+        background: var(--card-bg);
+        border-radius: var(--border-radius-xl);
+        padding: 1.25rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        border: 1px solid var(--border-color);
+    }
+
+    .prospecto-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .prospecto-name {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+        font-size: 1.1rem;
+    }
+
+    .prospecto-company {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .prospecto-details {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .prospecto-detail {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .prospecto-detail i {
+        color: var(--secondary-color);
+        width: 20px;
+        flex-shrink: 0;
+        margin-top: 0.1rem;
+    }
+
+    .prospecto-detail-content {
+        flex: 1;
+    }
+
+    .prospecto-detail-label {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.1rem;
+    }
+
+    .prospecto-detail-value {
+        font-size: 0.95rem;
+        color: var(--text-primary);
+        word-break: break-word;
+    }
+
+    .prospecto-card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid var(--border-color);
+        padding-top: 1rem;
+        margin-top: 0.5rem;
+    }
+
     /* Responsive para móviles mejorado */
     @media (max-width: 992px) {
         .status-cards-container {
@@ -439,7 +536,7 @@
         
         .table thead th, 
         .table tbody td {
-            padding: 0.9rem 0.75rem;
+            padding: 0.75rem 0.6rem;
         }
     }
 
@@ -447,6 +544,12 @@
         .page-header {
             flex-direction: column;
             align-items: stretch;
+            text-align: center;
+        }
+        
+        .page-header .btn {
+            width: 100%;
+            margin-top: 0.5rem;
         }
         
         .toolbar {
@@ -458,6 +561,19 @@
         .search-form {
             max-width: 100%;
         }
+        
+        .export-btn {
+            align-self: center;
+        }
+        
+        /* Ocultar tabla y mostrar vista de tarjetas en móviles */
+        .table-container {
+            display: none;
+        }
+        
+        .mobile-cards-view {
+            display: flex;
+        }
     }
 
     @media (max-width: 576px) {
@@ -465,9 +581,16 @@
             grid-template-columns: 1fr;
         }
         
-        .table thead th, 
-        .table tbody td {
-            padding: 0.8rem 0.5rem;
+        .prospectos-container {
+            padding: 0 0.5rem;
+        }
+        
+        .status-card {
+            padding: 1rem;
+        }
+        
+        .prospecto-card {
+            padding: 1rem;
         }
         
         .action-btns {
@@ -475,7 +598,40 @@
         }
         
         .empty-table-message {
-            padding: 2rem 1rem;
+            padding: 1.5rem 0.75rem;
+        }
+        
+        .pagination {
+            gap: 0.2rem;
+        }
+        
+        .page-link {
+            padding: 0.35rem 0.65rem;
+            min-width: 32px;
+            font-size: 0.8rem;
+        }
+    }
+
+    @media (max-width: 360px) {
+        .page-header h1 {
+            font-size: 1.35rem;
+        }
+        
+        .status-card .count {
+            font-size: 1.5rem;
+        }
+        
+        .status-card .label {
+            font-size: 0.75rem;
+        }
+        
+        .btn-action {
+            width: 30px;
+            height: 30px;
+        }
+        
+        .btn-action i {
+            font-size: 0.8em;
         }
     }
 </style>
@@ -526,7 +682,8 @@
             </a>
         </div>
 
-        <div class="table-responsive">
+        <!-- Vista de tabla para escritorio -->
+        <div class="table-container">
             <table class="table">
                 <thead>
                     <tr>
@@ -594,6 +751,90 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+        
+        <!-- Vista de tarjetas para móviles -->
+        <div class="mobile-cards-view">
+            {% for prospecto in prospectos %}
+            <div class="prospecto-card">
+                <div class="prospecto-card-header">
+                    <div>
+                        <div class="prospecto-name">{{ prospecto.nombre_completo }}</div>
+                        <div class="prospecto-company">{{ prospecto.empresa|default:"Sin empresa" }}</div>
+                    </div>
+                    <span class="badge bg-{{ prospecto.get_estado_color }}">
+                        {{ prospecto.get_estado_display }}
+                    </span>
+                </div>
+                
+                <div class="prospecto-details">
+                    <div class="prospecto-detail">
+                        <i class="fas fa-envelope"></i>
+                        <div class="prospecto-detail-content">
+                            <div class="prospecto-detail-label">Email</div>
+                            <div class="prospecto-detail-value">{{ prospecto.email|default:"-" }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="prospecto-detail">
+                        <i class="fas fa-phone"></i>
+                        <div class="prospecto-detail-content">
+                            <div class="prospecto-detail-label">Teléfono</div>
+                            <div class="prospecto-detail-value">{{ prospecto.telefono|default:"-" }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="prospecto-detail">
+                        <i class="fas fa-star"></i>
+                        <div class="prospecto-detail-content">
+                            <div class="prospecto-detail-label">Interés</div>
+                            <div class="prospecto-detail-value">{{ prospecto.get_interes_principal_display }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="prospecto-detail">
+                        <i class="fas fa-user-friends"></i>
+                        <div class="prospecto-detail-content">
+                            <div class="prospecto-detail-label">Referido por</div>
+                            <div class="prospecto-detail-value">
+                                {{ prospecto.referencio|default:"-" }}
+                                {% if prospecto.contacto_referencio %}
+                                    <div class="text-muted small">{{ prospecto.contacto_referencio }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="prospecto-card-footer">
+                    <div class="action-btns">
+                        <a href="{{ prospecto.get_absolute_url }}" 
+                           class="btn-action btn-info" 
+                           title="Ver Detalles">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <a href="{% url 'prospecto-update' prospecto.pk %}" 
+                           class="btn-action btn-warning" 
+                           title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <a href="{% url 'prospecto-delete' prospecto.pk %}" 
+                           class="btn-action btn-danger" 
+                           title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-table-message">
+                <i class="fas fa-user-slash"></i>
+                <div class="empty-title">No se encontraron prospectos</div>
+                {% if request.GET.q %}
+                    <div class="empty-subtitle">Intenta con otro término de búsqueda</div>
+                {% endif %}
+            </div>
+            {% endfor %}
         </div>
         
         {% if is_paginated %}
