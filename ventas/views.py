@@ -131,7 +131,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         ).select_related('prospecto').order_by('fecha_recordatorio')
         context['recordatorios_pasados'] = recordatorios_pasados
         
-        return context/r
+        return context
 
 
 class ProspectoListView(LoginRequiredMixin, ListView):
