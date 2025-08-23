@@ -105,25 +105,27 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             prospecto__in=prospectos_qs, fecha__gte=thirty_days_ago
         ).values_list('prospecto_id', flat=True).distinct()
 
-        # FIX: Corregimos la consulta para calcular correctamente los días de inactividad
+        # FIX: Cálculo correcto de días de inactividad usando ExpressionWrapper
+        from django.db.models import ExpressionWrapper, DurationField
+        
         prospectos_inactivos = prospectos_qs.exclude(
             Q(estado__in=[Prospecto.Estado.GANADO, Prospecto.Estado.PERDIDO]) | Q(id__in=prospectos_activos_ids)
         ).annotate(
             ultima_interaccion=Max('interacciones__fecha')
         ).annotate(
-            dias_inactivo=Case(
+            # Calculamos la diferencia en tiempo
+            diferencia_tiempo=Case(
                 When(ultima_interaccion__isnull=True, 
-                     then=(hoy - F('fecha_creacion'))),
-                default=(hoy - F('ultima_interaccion')),
-                output_field=IntegerField()
+                     then=ExpressionWrapper(hoy - F('fecha_creacion'), output_field=DurationField())),
+                default=ExpressionWrapper(hoy - F('ultima_interaccion'), output_field=DurationField()),
             )
         ).annotate(
-            # Convertimos la diferencia a días enteros
-            dias_inactivo_int=ExtractDay(F('dias_inactivo'))
+            # Extraemos los días de la diferencia
+            dias_inactivo=ExpressionWrapper(F('diferencia_tiempo') / timedelta(days=1), output_field=IntegerField())
         ).filter(
             # Filtramos para mostrar solo prospectos con al menos 1 día de inactividad
-            dias_inactivo_int__gte=1
-        ).order_by('-dias_inactivo_int')
+            dias_inactivo__gte=1
+        ).order_by('-dias_inactivo')
         
         # Paginación con opciones de tamaño de página
         page_size = int(self.request.GET.get('page_size', 10))

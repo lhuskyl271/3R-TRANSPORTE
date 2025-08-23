@@ -215,8 +215,8 @@
                         <tr>
                             <td><a href="{{ prospecto.get_absolute_url }}">{{ prospecto.nombre_completo }}</a></td>
                             <td class="text-center">
-                                <span class="badge {% if prospecto.dias_inactivo_int > 60 %}bg-danger{% elif prospecto.dias_inactivo_int > 30 %}bg-warning{% else %}bg-info{% endif %}">
-                                    {{ prospecto.dias_inactivo_int }} días
+                                <span class="badge {% if prospecto.dias_inactivo > 60 %}bg-danger{% elif prospecto.dias_inactivo > 30 %}bg-warning{% else %}bg-info{% endif %}">
+                                    {{ prospecto.dias_inactivo|floatformat:0 }} días
                                 </span>
                             </td>
                             <td>
