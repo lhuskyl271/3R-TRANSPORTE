@@ -14,6 +14,7 @@ from django.db.models import Count, Q, Avg, Max, Case, When, F, IntegerField
 from django.http import HttpResponseForbidden, HttpResponse
 from openpyxl import Workbook
 from django.contrib import messages
+from django.db.models.functions import ExtractDay
 from openpyxl.styles import Font, Alignment
 from django.utils import timezone
 import json
