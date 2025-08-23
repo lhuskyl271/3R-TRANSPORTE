@@ -10,7 +10,7 @@ from .forms import (
     ProspectoForm, InteraccionForm, RecordatorioForm, TrabajadorForm, 
     ProspectoTrabajadorForm, ProspectoTrabajadorUpdateForm
 )
-from django.db.models import Count, Q, Avg, Max
+from django.db.models import Count, Q, Avg, Max, Case, When, F, IntegerField
 from django.http import HttpResponseForbidden, HttpResponse
 from openpyxl import Workbook
 from django.contrib import messages
