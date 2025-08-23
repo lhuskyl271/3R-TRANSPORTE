@@ -58,10 +58,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         
         # --- AJUSTE DE ZONA HORARIA PARA MÉXICO ---
         try:
-            # Se establece la zona horaria central de México.
             user_timezone = pytz.timezone('America/Mexico_City') 
         except pytz.UnknownTimeZoneError:
-            # Si hay un error, se usa la zona horaria por defecto del servidor.
             user_timezone = pytz.timezone(timezone.get_default_timezone_name())
 
         # Se obtiene la hora actual convertida a la zona horaria correcta.
@@ -77,11 +75,11 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         # KPIs principales.
         context['total_prospectos'] = prospectos_qs.count()
         
-        # CAMBIO: Prospectos nuevos (menos de 20 días en lugar de 15)
-        veinte_dias_atras = hoy - timedelta(days=15)  # Cambiado de 15 a 20 días
+        # Prospectos nuevos (menos de 15 días)
+        quince_dias_atras = hoy - timedelta(days=15)
         context['prospectos_nuevos'] = prospectos_qs.filter(
             estado=Prospecto.Estado.NUEVO,
-            fecha_creacion__gte=veinte_dias_atras
+            fecha_creacion__gte=quince_dias_atras
         ).count()
         
         context['clientes_ganados'] = prospectos_qs.filter(estado=Prospecto.Estado.GANADO).count()
@@ -107,17 +105,25 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             prospecto__in=prospectos_qs, fecha__gte=thirty_days_ago
         ).values_list('prospecto_id', flat=True).distinct()
 
+        # FIX: Corregimos la consulta para calcular correctamente los días de inactividad
         prospectos_inactivos = prospectos_qs.exclude(
             Q(estado__in=[Prospecto.Estado.GANADO, Prospecto.Estado.PERDIDO]) | Q(id__in=prospectos_activos_ids)
         ).annotate(
-            ultima_interaccion=Max('interacciones__fecha'),
+            ultima_interaccion=Max('interacciones__fecha')
+        ).annotate(
             dias_inactivo=Case(
                 When(ultima_interaccion__isnull=True, 
-                     then=ExtractDay(hoy - F('fecha_creacion'))),
-                default=ExtractDay(hoy - F('ultima_interaccion')),
+                     then=(hoy - F('fecha_creacion'))),
+                default=(hoy - F('ultima_interaccion')),
                 output_field=IntegerField()
             )
-        ).order_by('-dias_inactivo')
+        ).annotate(
+            # Convertimos la diferencia a días enteros
+            dias_inactivo_int=ExtractDay(F('dias_inactivo'))
+        ).filter(
+            # Filtramos para mostrar solo prospectos con al menos 1 día de inactividad
+            dias_inactivo_int__gte=1
+        ).order_by('-dias_inactivo_int')
         
         # Paginación con opciones de tamaño de página
         page_size = int(self.request.GET.get('page_size', 10))
@@ -128,7 +134,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context['prospectos_inactivos'] = page_obj
         context['seguimiento_requerido_count'] = prospectos_inactivos.count()
 
-        # Recordatorios próximos (usando la hora local correcta).
+        # Recordatorios próximos
         quince_dias_despues = hoy + timedelta(days=15)
         recordatorios_proximos = Recordatorio.objects.filter(
             prospecto__in=prospectos_qs, completado=False, 
@@ -136,13 +142,22 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         ).select_related('prospecto').order_by('fecha_recordatorio')
         context['recordatorios_proximos'] = recordatorios_proximos
         
-        # Recordatorios pasados (no completados y con fecha anterior a hoy)
+        # Recordatorios pasados
         recordatorios_pasados = Recordatorio.objects.filter(
             prospecto__in=prospectos_qs, 
             completado=False, 
             fecha_recordatorio__lt=hoy
         ).select_related('prospecto').order_by('fecha_recordatorio')
         context['recordatorios_pasados'] = recordatorios_pasados
+        
+        # DEBUG: Agregamos información de depuración
+        context['debug_info'] = {
+            'hoy': hoy,
+            'prospectos_total': prospectos_qs.count(),
+            'prospectos_activos_count': len(prospectos_activos_ids),
+            'prospectos_inactivos_count': prospectos_inactivos.count(),
+            'thirty_days_ago': thirty_days_ago
+        }
         
         return context
 
