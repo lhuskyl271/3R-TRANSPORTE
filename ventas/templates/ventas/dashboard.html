@@ -183,14 +183,22 @@
             </div>
         </div>
         
-        <!-- Prospectos que Requieren Seguimiento -->
+        <!-- Conteo de Días de Inactividad por Prospecto -->
         <div class="card mb-4">
-            <div class="card-header">Prospectos que Requieren Seguimiento (30+ días inactivos)</div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Conteo de Días de Inactividad por Prospecto</span>
+                <div class="btn-group">
+                    <a href="?page_size=10" class="btn btn-outline-primary btn-sm {% if request.GET.page_size == '10' or not request.GET.page_size %}active{% endif %}">10</a>
+                    <a href="?page_size=50" class="btn btn-outline-primary btn-sm {% if request.GET.page_size == '50' %}active{% endif %}">50</a>
+                    <a href="?page_size=100" class="btn btn-outline-primary btn-sm {% if request.GET.page_size == '100' %}active{% endif %}">100</a>
+                </div>
+            </div>
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
                     <thead>
                         <tr>
                             <th>Prospecto</th>
+                            <th class="text-center">Días Inactivo</th>
                             <th>Último Contacto</th>
                         </tr>
                     </thead>
@@ -198,6 +206,11 @@
                         {% for prospecto in prospectos_inactivos %}
                         <tr>
                             <td><a href="{{ prospecto.get_absolute_url }}">{{ prospecto.nombre_completo }}</a></td>
+                            <td class="text-center">
+                                <span class="badge {% if prospecto.dias_inactivo > 60 %}bg-danger{% elif prospecto.dias_inactivo > 30 %}bg-warning{% else %}bg-info{% endif %}">
+                                    {{ prospecto.dias_inactivo }} días
+                                </span>
+                            </td>
                             <td>
                                 {% if prospecto.ultima_interaccion %}
                                     {{ prospecto.ultima_interaccion|date:"d M, Y" }}
@@ -208,17 +221,47 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="2" class="text-center text-muted py-4">¡Excelente! Ningún prospecto requiere seguimiento.</td>
+                            <td colspan="3" class="text-center text-muted py-4">¡Excelente! Ningún prospecto requiere seguimiento.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+            <!-- Paginación -->
+            {% if prospectos_inactivos.has_other_pages %}
+            <div class="card-footer">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination pagination-sm justify-content-center mb-0">
+                        {% if prospectos_inactivos.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ prospectos_inactivos.previous_page_number }}{% if request.GET.page_size %}&page_size={{ request.GET.page_size }}{% endif %}" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for i in prospectos_inactivos.paginator.page_range %}
+                        <li class="page-item {% if prospectos_inactivos.number == i %}active{% endif %}">
+                            <a class="page-link" href="?page={{ i }}{% if request.GET.page_size %}&page_size={{ request.GET.page_size }}{% endif %}">{{ i }}</a>
+                        </li>
+                        {% endfor %}
+                        
+                        {% if prospectos_inactivos.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ prospectos_inactivos.next_page_number }}{% if request.GET.page_size %}&page_size={{ request.GET.page_size }}{% endif %}" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
         </div>
 
         <!-- NUEVA SECCIÓN: Recordatorios Programados Vencidos -->
         <div class="card mb-4">
-            <div class="card-header bg-warning text-withe">Recordatorios Programados Pasados</div>
+            <div class="card-header bg-warning text-white">Recordatorios Programados Pasados</div>
             <div class="card-body">
                 {% for recordatorio in recordatorios_pasados %}
                 <div class="recordatorio-item recordatorio-pasado p-3 mb-2 rounded">

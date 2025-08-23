@@ -19,6 +19,8 @@ from django.utils import timezone
 import json
 from datetime import timedelta
 import pytz 
+from django.core.paginator import Paginator
+
 
 # ==============================================================================
 # MIXINS Y VISTAS BASE
@@ -107,12 +109,22 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         prospectos_inactivos = prospectos_qs.exclude(
             Q(estado__in=[Prospecto.Estado.GANADO, Prospecto.Estado.PERDIDO]) | Q(id__in=prospectos_activos_ids)
         ).annotate(
-            ultima_interaccion=Max('interacciones__fecha')
-        ).filter(
-            Q(ultima_interaccion__lt=thirty_days_ago) | Q(ultima_interaccion__isnull=True, fecha_creacion__lt=thirty_days_ago)
-        ).order_by('ultima_interaccion')
+            ultima_interaccion=Max('interacciones__fecha'),
+            dias_inactivo=Case(
+                When(ultima_interaccion__isnull=True, 
+                     then=ExtractDay(hoy - F('fecha_creacion'))),
+                default=ExtractDay(hoy - F('ultima_interaccion')),
+                output_field=IntegerField()
+            )
+        ).order_by('-dias_inactivo')
         
-        context['prospectos_inactivos'] = prospectos_inactivos
+        # Paginación con opciones de tamaño de página
+        page_size = int(self.request.GET.get('page_size', 10))
+        paginator = Paginator(prospectos_inactivos, page_size)
+        page_number = self.request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        
+        context['prospectos_inactivos'] = page_obj
         context['seguimiento_requerido_count'] = prospectos_inactivos.count()
 
         # Recordatorios próximos (usando la hora local correcta).
