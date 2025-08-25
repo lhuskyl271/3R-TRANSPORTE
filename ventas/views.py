@@ -14,7 +14,7 @@ from django.db.models import Count, Q, Avg, Max, Case, When, F, IntegerField
 from django.http import HttpResponseForbidden, HttpResponse
 from openpyxl import Workbook
 from django.contrib import messages
-from django.db.models.functions import ExtractDay
+from django.db.models.functions import ExtractDay, Now, Extract
 from openpyxl.styles import Font, Alignment
 from django.utils import timezone
 import json
@@ -99,14 +99,11 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         ).values('trabajador__nombre').annotate(promedio=Avg('calificacion')).order_by('-promedio')
         context['promedio_calificaciones_trabajador'] = promedio_calificaciones
 
-        # Prospectos inactivos que requieren seguimiento.
+        # --- LÓGICA CENTRAL PARA PROSPECTOS INACTIVOS ---
         thirty_days_ago = hoy - timedelta(days=30)
         prospectos_activos_ids = Interaccion.objects.filter(
             prospecto__in=prospectos_qs, fecha__gte=thirty_days_ago
         ).values_list('prospecto_id', flat=True).distinct()
-
-        # FIX: Cálculo correcto de días de inactividad usando funciones de base de datos
-        from django.db.models.functions import Extract, Now
         
         prospectos_inactivos = prospectos_qs.exclude(
             Q(estado__in=[Prospecto.Estado.GANADO, Prospecto.Estado.PERDIDO]) | Q(id__in=prospectos_activos_ids)
@@ -116,8 +113,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             # Calculamos los días de inactividad usando funciones de fecha de la base de datos
             dias_inactivo=Case(
                 When(ultima_interaccion__isnull=True, 
-                     then=Extract(Now() - F('fecha_creacion'), 'day')),
-                default=Extract(Now() - F('ultima_interaccion'), 'day'),
+                     then=Extract(Now() - F('fecha_creacion'), 'day')), # Si no hay interacción, usa la fecha de creación
+                default=Extract(Now() - F('ultima_interaccion'), 'day'), # Si hay, usa la fecha de la última interacción
                 output_field=IntegerField()
             )
         ).filter(
@@ -149,15 +146,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             fecha_recordatorio__lt=hoy
         ).select_related('prospecto').order_by('fecha_recordatorio')
         context['recordatorios_pasados'] = recordatorios_pasados
-        
-        # DEBUG: Agregamos información de depuración
-        context['debug_info'] = {
-            'hoy': hoy,
-            'prospectos_total': prospectos_qs.count(),
-            'prospectos_activos_count': len(prospectos_activos_ids),
-            'prospectos_inactivos_count': prospectos_inactivos.count(),
-            'thirty_days_ago': thirty_days_ago
-        }
         
         return context
 
@@ -198,7 +186,6 @@ class ProspectoListView(LoginRequiredMixin, ListView):
         }
 
         status_cards_data = []
-        # ✅ CORRECCIÓN: Usar la clase interna `Estado.choices` del modelo.
         for value, name in Prospecto.Estado.choices:
             status_cards_data.append({
                 'value': value,
@@ -388,7 +375,6 @@ class RecordatorioDeleteView(LoginRequiredMixin, OwnerRequiredMixin, DeleteView)
 @login_required
 def toggle_recordatorio(request, pk):
     recordatorio = get_object_or_404(Recordatorio, pk=pk)
-    # OwnerRequiredMixin no aplica a funciones, así que validamos manualmente
     if recordatorio.prospecto.asignado_a != request.user and not request.user.is_superuser:
         return HttpResponseForbidden("No tienes permiso.")
     
