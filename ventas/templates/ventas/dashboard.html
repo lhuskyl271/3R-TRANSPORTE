@@ -201,6 +201,7 @@
                             <th>Prospecto</th>
                             <th class="text-center">Días Inactivo</th>
                             <th>Último Contacto</th>
+                            <th>Estado</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -219,10 +220,15 @@
                                     <span class="text-muted">Nunca contactado</span>
                                 {% endif %}
                             </td>
+                            <td>
+                                <span class="badge bg-{{ prospecto.get_estado_color }}">
+                                    {{ prospecto.get_estado_display }}
+                                </span>
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="3" class="text-center text-muted py-4">
+                            <td colspan="4" class="text-center text-muted py-4">
                                 {% if seguimiento_requerido_count == 0 %}
                                     ¡Excelente! Ningún prospecto requiere seguimiento.
                                 {% else %}

@@ -90,25 +90,37 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         ).values('trabajador__nombre').annotate(promedio=Avg('calificacion')).order_by('-promedio')
         context['promedio_calificaciones_trabajador'] = promedio_calificaciones
 
-        # --- LÓGICA CENTRAL PARA EL CONTEO DE DÍAS DE INACTIVIDAD ---
+        # --- LÓGICA CORREGIDA PARA EL CONTEO DE DÍAS DE INACTIVIDAD ---
         thirty_days_ago = hoy - timedelta(days=30)
+        
+        # Obtener IDs de prospectos con interacciones en los últimos 30 días
         prospectos_activos_ids = Interaccion.objects.filter(
-            prospecto__in=prospectos_qs, fecha__gte=thirty_days_ago
+            prospecto__in=prospectos_qs, 
+            fecha__gte=thirty_days_ago
         ).values_list('prospecto_id', flat=True).distinct()
         
+        # Prospectos inactivos: excluir ganados, perdidos y los que tienen interacciones recientes
         prospectos_inactivos = prospectos_qs.exclude(
-            Q(estado__in=[Prospecto.Estado.GANADO, Prospecto.Estado.PERDIDO]) | Q(id__in=prospectos_activos_ids)
+            Q(estado__in=[Prospecto.Estado.GANADO, Prospecto.Estado.PERDIDO]) | 
+            Q(id__in=prospectos_activos_ids)
         ).annotate(
+            # Obtener la fecha de la última interacción
             ultima_interaccion=Max('interacciones__fecha')
         ).annotate(
+            # Calcular días de inactividad
             dias_inactivo=Case(
-                When(ultima_interaccion__isnull=True, 
-                     then=Extract(Now() - F('fecha_creacion'), 'day')),
-                default=Extract(Now() - F('ultima_interaccion'), 'day'),
+                When(
+                    ultima_interaccion__isnull=True, 
+                    then=ExtractDay(Now() - F('fecha_creacion'))
+                ),
+                When(
+                    ultima_interaccion__isnull=False,
+                    then=ExtractDay(Now() - F('ultima_interaccion'))
+                ),
                 output_field=IntegerField()
             )
         ).filter(
-            dias_inactivo__gte=1
+            dias_inactivo__gte=1  # Solo prospectos con al menos 1 día de inactividad
         ).order_by('-dias_inactivo')
         
         page_size = int(self.request.GET.get('page_size', 10))
@@ -118,6 +130,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         
         context['prospectos_inactivos'] = page_obj
         context['seguimiento_requerido_count'] = prospectos_inactivos.count()
+
+
 
         quince_dias_despues = hoy + timedelta(days=15)
         recordatorios_proximos = Recordatorio.objects.filter(
