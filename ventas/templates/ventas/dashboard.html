@@ -67,14 +67,6 @@
         font-size: 0.75rem;
         padding: 0.25rem 0.5rem;
     }
-    .debug-info {
-        font-size: 0.8rem;
-        color: #6c757d;
-        background-color: #f8f9fa;
-        padding: 0.5rem;
-        border-radius: 0.25rem;
-        margin-top: 1rem;
-    }
 </style>
 
 <div class="page-header">
@@ -304,17 +296,6 @@
         </div>
     </div>
 </div>
-
-{% if debug_info %}
-<div class="debug-info mt-4">
-    <strong>Información de depuración:</strong><br>
-    Hoy: {{ debug_info.hoy|date:"Y-m-d H:i:s" }}<br>
-    Total prospectos: {{ debug_info.prospectos_total }}<br>
-    Prospectos activos: {{ debug_info.prospectos_activos_count }}<br>
-    Prospectos inactivos: {{ debug_info.prospectos_inactivos_count }}<br>
-    30 días atrás: {{ debug_info.thirty_days_ago|date:"Y-m-d H:i:s" }}
-</div>
-{% endif %}
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>

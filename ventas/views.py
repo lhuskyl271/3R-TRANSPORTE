@@ -91,21 +91,18 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context['promedio_calificaciones_trabajador'] = promedio_calificaciones
 
         # --- LÓGICA CORREGIDA PARA EL CONTEO DE DÍAS DE INACTIVIDAD ---
-        thirty_days_ago = hoy - timedelta(days=30)
+        # Obtener la fecha de la última interacción para cada prospecto
+        from django.db.models import Subquery, OuterRef
+        ultima_interaccion_subquery = Interaccion.objects.filter(
+            prospecto=OuterRef('pk')
+        ).order_by('-fecha').values('fecha')[:1]
         
-        # Obtener IDs de prospectos con interacciones en los últimos 30 días
-        prospectos_activos_ids = Interaccion.objects.filter(
-            prospecto__in=prospectos_qs, 
-            fecha__gte=thirty_days_ago
-        ).values_list('prospecto_id', flat=True).distinct()
-        
-        # Prospectos inactivos: excluir ganados, perdidos y los que tienen interacciones recientes
+        # Prospectos inactivos: excluir ganados, perdidos y obtener días desde última interacción
         prospectos_inactivos = prospectos_qs.exclude(
-            Q(estado__in=[Prospecto.Estado.GANADO, Prospecto.Estado.PERDIDO]) | 
-            Q(id__in=prospectos_activos_ids)
+            estado__in=[Prospecto.Estado.GANADO, Prospecto.Estado.PERDIDO]
         ).annotate(
             # Obtener la fecha de la última interacción
-            ultima_interaccion=Max('interacciones__fecha')
+            ultima_interaccion=Subquery(ultima_interaccion_subquery)
         ).annotate(
             # Calcular días de inactividad
             dias_inactivo=Case(
@@ -131,8 +128,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context['prospectos_inactivos'] = page_obj
         context['seguimiento_requerido_count'] = prospectos_inactivos.count()
 
-
-
         quince_dias_despues = hoy + timedelta(days=15)
         recordatorios_proximos = Recordatorio.objects.filter(
             prospecto__in=prospectos_qs, completado=False, 
@@ -146,14 +141,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             fecha_recordatorio__lt=hoy
         ).select_related('prospecto').order_by('fecha_recordatorio')
         context['recordatorios_pasados'] = recordatorios_pasados
-        
-        context['debug_info'] = {
-            'hoy': hoy,
-            'prospectos_total': prospectos_qs.count(),
-            'prospectos_activos_count': len(prospectos_activos_ids),
-            'prospectos_inactivos_count': prospectos_inactivos.count(),
-            'thirty_days_ago': thirty_days_ago
-        }
         
         return context
 
