@@ -67,21 +67,12 @@
         font-size: 0.75rem;
         padding: 0.25rem 0.5rem;
     }
-    .debug-info {
-        font-size: 0.8rem;
-        color: #6c757d;
-        background-color: #f8f9fa;
-        padding: 0.5rem;
-        border-radius: 0.25rem;
-        margin-top: 1rem;
-    }
 </style>
 
 <div class="page-header">
     <h1><i class="fas fa-chart-line me-2"></i>Dashboard de Ventas</h1>
 </div>
 
-<!-- KPIs -->
 <div class="row">
     <div class="col-lg-3 col-md-6 mb-4">
         <div class="card kpi-card">
@@ -131,9 +122,7 @@
 </div>
 
 <div class="row">
-    <!-- Columna izquierda -->
     <div class="col-lg-6">
-        <!-- Gráfico de Pastel -->
         <div class="card mb-4">
             <div class="card-header">Distribución de Prospectos por Estado</div>
             <div class="chart-container">
@@ -141,7 +130,6 @@
             </div>
         </div>
         
-        <!-- Recordatorios Próximos -->
         <div class="card mb-4">
             <div class="card-header">Recordatorios Próximos (15 días)</div>
             <div class="card-body">
@@ -160,9 +148,7 @@
         </div>
     </div>
 
-    <!-- Columna derecha -->
     <div class="col-lg-6">
-        <!-- Calificación Promedio por Vendedor -->
         <div class="card mb-4">
             <div class="card-header">Calificación Promedio por Vendedor</div>
             <div class="table-responsive">
@@ -191,7 +177,6 @@
             </div>
         </div>
         
-        <!-- Conteo de Días de Inactividad por Prospecto -->
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>Conteo de Días de Inactividad por Prospecto</span>
@@ -230,18 +215,13 @@
                         {% empty %}
                         <tr>
                             <td colspan="3" class="text-center text-muted py-4">
-                                {% if seguimiento_requerido_count == 0 %}
-                                    ¡Excelente! Ningún prospecto requiere seguimiento.
-                                {% else %}
-                                    No se encontraron prospectos inactivos con los filtros actuales.
-                                {% endif %}
+                                ¡Excelente! Ningún prospecto requiere seguimiento.
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-            <!-- Paginación -->
             {% if prospectos_inactivos.has_other_pages %}
             <div class="card-footer">
                 <nav aria-label="Page navigation">
@@ -273,7 +253,6 @@
             {% endif %}
         </div>
 
-        <!-- Recordatorios Programados Vencidos -->
         <div class="card mb-4">
             <div class="card-header bg-warning text-white">Recordatorios Programados Pasados</div>
             <div class="card-body">
@@ -308,19 +287,6 @@
     </div>
 </div>
 
-<!-- Información de depuración (opcional, puedes eliminar esto en producción) -->
-{% if debug_info %}
-<div class="debug-info mt-4">
-    <strong>Información de depuración:</strong><br>
-    Hoy: {{ debug_info.hoy|date:"Y-m-d H:i:s" }}<br>
-    Total prospectos: {{ debug_info.prospectos_total }}<br>
-    Prospectos activos: {{ debug_info.prospectos_activos_count }}<br>
-    Prospectos inactivos: {{ debug_info.prospectos_inactivos_count }}<br>
-    30 días atrás: {{ debug_info.thirty_days_ago|date:"Y-m-d H:i:s" }}
-</div>
-{% endif %}
-
-<!-- Incluir Chart.js y el plugin de datalabels -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 <script>
