@@ -56,26 +56,19 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         user = self.request.user
         
-        # --- AJUSTE DE ZONA HORARIA PARA MÉXICO ---
         try:
             user_timezone = pytz.timezone('America/Mexico_City') 
         except pytz.UnknownTimeZoneError:
             user_timezone = pytz.timezone(timezone.get_default_timezone_name())
 
-        # Se obtiene la hora actual convertida a la zona horaria correcta.
         hoy = timezone.now().astimezone(user_timezone)
         
-        # --- QUERIES PARA LOS DATOS DEL DASHBOARD ---
-
-        # Filtro base de prospectos según el tipo de usuario.
         prospectos_qs = Prospecto.objects.all()
         if not user.is_superuser:
             prospectos_qs = prospectos_qs.filter(asignado_a=user)
 
-        # KPIs principales.
         context['total_prospectos'] = prospectos_qs.count()
         
-        # Prospectos nuevos (menos de 15 días)
         quince_dias_atras = hoy - timedelta(days=15)
         context['prospectos_nuevos'] = prospectos_qs.filter(
             estado=Prospecto.Estado.NUEVO,
@@ -84,7 +77,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         
         context['clientes_ganados'] = prospectos_qs.filter(estado=Prospecto.Estado.GANADO).count()
         
-        # Datos para el gráfico de pastel.
         reporte_data = prospectos_qs.values('estado').annotate(total=Count('estado')).order_by('estado')
         estado_display_map = dict(Prospecto.Estado.choices) 
         chart_data = {
@@ -93,13 +85,12 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         }
         context['chart_data_json'] = json.dumps(chart_data)
         
-        # Calificación promedio por trabajador.
         promedio_calificaciones = ProspectoTrabajador.objects.filter(
             prospecto__in=prospectos_qs
         ).values('trabajador__nombre').annotate(promedio=Avg('calificacion')).order_by('-promedio')
         context['promedio_calificaciones_trabajador'] = promedio_calificaciones
 
-        # --- LÓGICA CENTRAL PARA PROSPECTOS INACTIVOS ---
+        # --- LÓGICA CENTRAL PARA EL CONTEO DE DÍAS DE INACTIVIDAD ---
         thirty_days_ago = hoy - timedelta(days=30)
         prospectos_activos_ids = Interaccion.objects.filter(
             prospecto__in=prospectos_qs, fecha__gte=thirty_days_ago
@@ -110,19 +101,16 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         ).annotate(
             ultima_interaccion=Max('interacciones__fecha')
         ).annotate(
-            # Calculamos los días de inactividad usando funciones de fecha de la base de datos
             dias_inactivo=Case(
                 When(ultima_interaccion__isnull=True, 
-                     then=Extract(Now() - F('fecha_creacion'), 'day')), # Si no hay interacción, usa la fecha de creación
-                default=Extract(Now() - F('ultima_interaccion'), 'day'), # Si hay, usa la fecha de la última interacción
+                     then=Extract(Now() - F('fecha_creacion'), 'day')),
+                default=Extract(Now() - F('ultima_interaccion'), 'day'),
                 output_field=IntegerField()
             )
         ).filter(
-            # Filtramos para mostrar solo prospectos con al menos 1 día de inactividad
             dias_inactivo__gte=1
         ).order_by('-dias_inactivo')
         
-        # Paginación con opciones de tamaño de página
         page_size = int(self.request.GET.get('page_size', 10))
         paginator = Paginator(prospectos_inactivos, page_size)
         page_number = self.request.GET.get('page')
@@ -131,7 +119,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context['prospectos_inactivos'] = page_obj
         context['seguimiento_requerido_count'] = prospectos_inactivos.count()
 
-        # Recordatorios próximos
         quince_dias_despues = hoy + timedelta(days=15)
         recordatorios_proximos = Recordatorio.objects.filter(
             prospecto__in=prospectos_qs, completado=False, 
@@ -139,13 +126,20 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         ).select_related('prospecto').order_by('fecha_recordatorio')
         context['recordatorios_proximos'] = recordatorios_proximos
         
-        # Recordatorios pasados
         recordatorios_pasados = Recordatorio.objects.filter(
             prospecto__in=prospectos_qs, 
             completado=False, 
             fecha_recordatorio__lt=hoy
         ).select_related('prospecto').order_by('fecha_recordatorio')
         context['recordatorios_pasados'] = recordatorios_pasados
+        
+        context['debug_info'] = {
+            'hoy': hoy,
+            'prospectos_total': prospectos_qs.count(),
+            'prospectos_activos_count': len(prospectos_activos_ids),
+            'prospectos_inactivos_count': prospectos_inactivos.count(),
+            'thirty_days_ago': thirty_days_ago
+        }
         
         return context
 
@@ -244,10 +238,6 @@ class ProspectoDeleteView(LoginRequiredMixin, OwnerRequiredMixin, DeleteView):
         messages.success(self.request, f"Prospecto '{self.object.nombre_completo}' ha sido eliminado.")
         return super().form_valid(form)
 
-# ==============================================================================
-# VISTAS DE TRABAJADORES (CRUD)
-# ==============================================================================
-
 class TrabajadorListView(LoginRequiredMixin, ListView):
     model = Trabajador
     template_name = 'ventas/trabajador_list.html'
@@ -270,10 +260,6 @@ class TrabajadorDeleteView(LoginRequiredMixin, DeleteView):
     model = Trabajador
     template_name = 'ventas/trabajador_confirm_delete.html'
     success_url = reverse_lazy('trabajador-list')
-
-# ==============================================================================
-# VISTAS DE RELACIÓN (PROSPECTO <-> TRABAJADOR)
-# ==============================================================================
 
 @login_required
 def add_trabajador_a_prospecto(request, prospecto_pk):
@@ -311,10 +297,6 @@ class ProspectoTrabajadorDeleteView(LoginRequiredMixin, OwnerRequiredMixin, Dele
     def get_success_url(self):
         messages.success(self.request, f"Se eliminó la relación con '{self.object.trabajador.nombre}'.")
         return reverse('prospecto-detail', kwargs={'pk': self.object.prospecto.pk})
-
-# ==============================================================================
-# VISTAS DE ACTIVIDADES (INTERACCIONES Y RECORDATORIOS)
-# ==============================================================================
 
 @login_required
 def add_interaccion(request, prospecto_pk):
@@ -383,10 +365,6 @@ def toggle_recordatorio(request, pk):
     status = "completado" if recordatorio.completado else "marcado como pendiente"
     messages.info(request, f"Recordatorio '{recordatorio.titulo}' {status}.")
     return redirect('prospecto-detail', pk=recordatorio.prospecto.pk)
-
-# ==============================================================================
-# VISTA DE EXPORTACIÓN
-# ==============================================================================
 
 @login_required
 def export_prospectos_excel(request):
