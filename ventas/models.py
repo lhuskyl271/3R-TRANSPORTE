@@ -3,6 +3,8 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from django.urls import reverse
 from django.core.validators import RegexValidator
+from .models import Prospecto, ArchivoAdjunto
+from .forms import ArchivoAdjuntoForm
 
 # --- Validadores ---
 # Validador para asegurar un formato de teléfono básico.
@@ -234,3 +236,5 @@ class ArchivoAdjunto(models.Model):
 
     def __str__(self):
         return self.nombre    
+    
+    

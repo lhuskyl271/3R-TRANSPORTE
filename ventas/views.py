@@ -5,10 +5,10 @@ from django.views.generic import (
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy, reverse
-from .models import Prospecto, Interaccion, Recordatorio, Etiqueta, Trabajador, ProspectoTrabajador
+from .models import Prospecto, Interaccion, Recordatorio, Etiqueta, Trabajador, ProspectoTrabajador, ArchivoAdjunto
 from .forms import (
     ProspectoForm, InteraccionForm, RecordatorioForm, TrabajadorForm, 
-    ProspectoTrabajadorForm, ProspectoTrabajadorUpdateForm,ArchivoAdjuntoForm
+    ProspectoTrabajadorForm, ProspectoTrabajadorUpdateForm, ArchivoAdjuntoForm
 )
 from django.db.models import Count, Q, Avg, Max, Case, When, F, IntegerField
 from django.http import HttpResponseForbidden, HttpResponse
@@ -425,7 +425,6 @@ def export_prospectos_excel(request):
     workbook.save(response)
     return response
 
-@login_required
 def add_archivo(request, prospecto_pk):
     prospecto = get_object_or_404(Prospecto, pk=prospecto_pk)
     if request.method == 'POST':
