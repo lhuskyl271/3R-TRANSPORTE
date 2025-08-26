@@ -3,8 +3,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from django.urls import reverse
 from django.core.validators import RegexValidator
-from .models import Prospecto, ArchivoAdjunto
-from .forms import ArchivoAdjuntoForm
+
 
 # --- Validadores ---
 # Validador para asegurar un formato de teléfono básico.
@@ -224,7 +223,7 @@ class ArchivoAdjunto(models.Model):
     )
     nombre = models.CharField(max_length=255, verbose_name="Título del Archivo")
     archivo = models.FileField(
-        upload_to='media/',  # El archivo se guardará en la carpeta 'media/' de tu bucket de S3
+        upload_to='media/',
         verbose_name="Archivo Adjunto"
     )
     fecha_subida = models.DateTimeField(auto_now_add=True)
@@ -235,6 +234,6 @@ class ArchivoAdjunto(models.Model):
         verbose_name_plural = "Archivos Adjuntos"
 
     def __str__(self):
-        return self.nombre    
+        return self.nombre
     
     
