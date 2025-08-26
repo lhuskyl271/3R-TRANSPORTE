@@ -68,7 +68,12 @@ class Prospecto(models.Model):
     
     nombre_completo = models.CharField(max_length=200)
     email = models.EmailField(unique=True)
-    telefono = models.CharField(validators=[phone_validator], max_length=17, blank=True)
+    telefono = models.CharField(
+        max_length=25,  # Aumentamos un poco por si acaso
+        blank=True,     # Opcional: permite que el campo esté vacío
+        help_text="Introduce el número de teléfono con código de país, ej: +1 (555) 123-4567"
+    )
+
     empresa = models.CharField(max_length=100, blank=True)
     puesto = models.CharField(max_length=100, blank=True)
     
