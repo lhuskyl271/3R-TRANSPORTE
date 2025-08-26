@@ -336,7 +336,7 @@
                     <span>Registrar Interacción</span>
                 </div>
                 <div class="card-body">
-                    <form action="{% url 'add_interaccion' prospecto.pk %}" method="post">
+                    <form action="{% url 'add-interaccion' prospecto.pk %}" method="post">
                         {% csrf_token %}
                         <div class="mb-3">
                             <label for="{{ interaccion_form.tipo.id_for_label }}" class="form-label">Tipo</label>
@@ -416,12 +416,12 @@
                                                 </button>
                                                 <ul class="dropdown-menu dropdown-menu-end">
                                                     <li>
-                                                        <a class="dropdown-item" href="{% url 'prospecto_trabajador_update' relacion.pk %}">
+                                                        <a class="dropdown-item" href="{% url 'prospecto-trabajador-update' relacion.pk %}">
                                                             <i class="fas fa-edit text-primary me-2"></i>Editar
                                                         </a>
                                                     </li>
                                                     <li>
-                                                        <a class="dropdown-item text-danger" href="{% url 'prospecto_trabajador_delete' relacion.pk %}">
+                                                        <a class="dropdown-item text-danger" href="{% url 'prospecto-trabajador-delete' relacion.pk %}">
                                                             <i class="fas fa-trash-alt me-2"></i>Eliminar
                                                         </a>
                                                     </li>
@@ -460,10 +460,10 @@
                                             </small>
                                         </div>
                                         <div>
-                                            <a href="{% url 'interaccion_update' interaccion.pk %}" class="btn btn-sm btn-outline-primary action-btn me-1" title="Editar">
+                                            <a href="{% url 'interaccion-update' interaccion.pk %}" class="btn btn-sm btn-outline-primary action-btn me-1" title="Editar">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <a href="{% url 'interaccion_delete' interaccion.pk %}" class="btn btn-sm btn-outline-danger action-btn" title="Eliminar">
+                                            <a href="{% url 'interaccion-delete' interaccion.pk %}" class="btn btn-sm btn-outline-danger action-btn" title="Eliminar">
                                                 <i class="fas fa-trash-alt"></i>
                                             </a>
                                         </div>
@@ -489,7 +489,7 @@
                                 <i class="fas fa-plus-circle me-2"></i>Nuevo Recordatorio
                             </div>
                             <div class="card-body">
-                                <form action="{% url 'add_recordatorio' prospecto.pk %}" method="post">
+                                <form action="{% url 'add-recordatorio' prospecto.pk %}" method="post">
                                     {% csrf_token %}
                                     <div class="row">
                                         <div class="col-md-6 mb-3">
@@ -534,17 +534,17 @@
                                             </small>
                                         </div>
                                         <div class="reminder-actions d-flex ms-md-3">
-                                            <a href="{% url 'toggle_recordatorio' recordatorio.pk %}" class="btn btn-sm {% if recordatorio.completado %}btn-outline-secondary{% else %}btn-outline-success{% endif %} me-1 action-btn" title="{% if recordatorio.completado %}Reactivar{% else %}Completar{% endif %}">
+                                            <a href="{% url 'toggle-recordatorio' recordatorio.pk %}" class="btn btn-sm {% if recordatorio.completado %}btn-outline-secondary{% else %}btn-outline-success{% endif %} me-1 action-btn" title="{% if recordatorio.completado %}Reactivar{% else %}Completar{% endif %}">
                                                 {% if recordatorio.completado %}
                                                     <i class="fas fa-undo"></i>
                                                 {% else %}
                                                     <i class="fas fa-check"></i>
                                                 {% endif %}
                                             </a>
-                                            <a href="{% url 'recordatorio_update' recordatorio.pk %}" class="btn btn-sm btn-outline-primary me-1 action-btn" title="Editar">
+                                            <a href="{% url 'recordatorio-update' recordatorio.pk %}" class="btn btn-sm btn-outline-primary me-1 action-btn" title="Editar">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <a href="{% url 'recordatorio_delete' recordatorio.pk %}" class="btn btn-sm btn-outline-danger action-btn" title="Eliminar">
+                                            <a href="{% url 'recordatorio-delete' recordatorio.pk %}" class="btn btn-sm btn-outline-danger action-btn" title="Eliminar">
                                                 <i class="fas fa-trash-alt"></i>
                                             </a>
                                         </div>
@@ -607,7 +607,7 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{% url 'add_trabajador_a_prospecto' prospecto.pk %}" method="post">
+            <form action="{% url 'add-trabajador-a-prospecto' prospecto.pk %}" method="post">
                 <div class="modal-body">
                     {% csrf_token %}
                     <div class="mb-3">
@@ -650,7 +650,7 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{% url 'add_archivo' prospecto.pk %}" method="post" enctype="multipart/form-data">
+            <form action="{% url 'add-archivo' prospecto.pk %}" method="post" enctype="multipart/form-data">
                 <div class="modal-body">
                     {% csrf_token %}
                     <div class="mb-3">
