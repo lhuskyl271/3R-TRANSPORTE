@@ -202,7 +202,10 @@ class ProspectoDetailView(LoginRequiredMixin, OwnerRequiredMixin, DetailView):
         context['interaccion_form'] = InteraccionForm()
         context['recordatorio_form'] = RecordatorioForm()
         context['trabajador_form'] = ProspectoTrabajadorForm()
-        context['archivos_adjuntos'] = self.object.archivos_adjuntos.all() 
+        
+        context['archivo_form'] = ArchivoAdjuntoForm() 
+        
+        context['archivos_adjuntos'] = self.object.archivos_adjuntos.all()
         
         trabajadores_asociados_ids = self.object.trabajadores.values_list('id', flat=True)
         context['trabajador_form'].fields['trabajador'].queryset = Trabajador.objects.exclude(id__in=trabajadores_asociados_ids)
