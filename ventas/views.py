@@ -1,3 +1,5 @@
+# ventas/views.py
+
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
@@ -38,7 +40,7 @@ class OwnerRequiredMixin:
         asignado = None
         if isinstance(obj, Prospecto):
             asignado = obj.asignado_a
-        elif isinstance(obj, (Interaccion, Recordatorio, ProspectoTrabajador)):
+        elif isinstance(obj, (Interaccion, Recordatorio, ProspectoTrabajador, ArchivoAdjunto)):
             asignado = obj.prospecto.asignado_a
         
         if asignado and asignado != self.request.user and not self.request.user.is_superuser:
@@ -90,21 +92,16 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         ).values('trabajador__nombre').annotate(promedio=Avg('calificacion')).order_by('-promedio')
         context['promedio_calificaciones_trabajador'] = promedio_calificaciones
 
-        # --- LÓGICA CORREGIDA PARA EL CONTEO DE DÍAS DE INACTIVIDAD ---
-        # Obtener la fecha de la última interacción para cada prospecto
         from django.db.models import Subquery, OuterRef
         ultima_interaccion_subquery = Interaccion.objects.filter(
             prospecto=OuterRef('pk')
         ).order_by('-fecha').values('fecha')[:1]
         
-        # Prospectos inactivos: excluir ganados, perdidos y obtener días desde última interacción
         prospectos_inactivos = prospectos_qs.exclude(
             estado__in=[Prospecto.Estado.GANADO, Prospecto.Estado.PERDIDO]
         ).annotate(
-            # Obtener la fecha de la última interacción
             ultima_interaccion=Subquery(ultima_interaccion_subquery)
         ).annotate(
-            # Calcular días de inactividad
             dias_inactivo=Case(
                 When(
                     ultima_interaccion__isnull=True, 
@@ -117,7 +114,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 output_field=IntegerField()
             )
         ).filter(
-            dias_inactivo__gte=1  # Solo prospectos con al menos 1 día de inactividad
+            dias_inactivo__gte=1
         ).order_by('-dias_inactivo')
         
         page_size = int(self.request.GET.get('page_size', 10))
@@ -202,9 +199,7 @@ class ProspectoDetailView(LoginRequiredMixin, OwnerRequiredMixin, DetailView):
         context['interaccion_form'] = InteraccionForm()
         context['recordatorio_form'] = RecordatorioForm()
         context['trabajador_form'] = ProspectoTrabajadorForm()
-        
         context['archivo_form'] = ArchivoAdjuntoForm() 
-        
         context['archivos_adjuntos'] = self.object.archivos_adjuntos.all()
         
         trabajadores_asociados_ids = self.object.trabajadores.values_list('id', flat=True)
@@ -428,34 +423,41 @@ def export_prospectos_excel(request):
     workbook.save(response)
     return response
 
+# --- FUNCIÓN MODIFICADA PARA CAPTURAR ERRORES ---
+@login_required
 def add_archivo(request, prospecto_pk):
     prospecto = get_object_or_404(Prospecto, pk=prospecto_pk)
     if request.method == 'POST':
         form = ArchivoAdjuntoForm(request.POST, request.FILES)
         if form.is_valid():
-            archivo_adjunto = form.save(commit=False)
-            archivo_adjunto.prospecto = prospecto
-            archivo_adjunto.save()
-            messages.success(request, "Archivo adjunto subido exitosamente.")
+            try:
+                archivo_adjunto = form.save(commit=False)
+                archivo_adjunto.prospecto = prospecto
+                archivo_adjunto.save()
+                messages.success(request, "Archivo adjunto subido exitosamente.")
+            except Exception as e:
+                # Esto atrapará cualquier error durante la subida a S3
+                # y lo mostrará como un mensaje de error en la pantalla.
+                messages.error(request, f"Error al contactar el servidor de archivos: {e}")
         else:
-            messages.error(request, "Error al subir el archivo. Por favor, revisa los campos.")
+            # Esto mostrará errores de validación si el formulario no es válido
+            error_string = " ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()])
+            messages.error(request, f"Error en el formulario. Por favor, revisa los campos. Detalles: {error_string}")
+            
     return redirect('prospecto-detail', pk=prospecto_pk)
+
 
 @login_required
 def delete_archivo(request, pk):
     archivo = get_object_or_404(ArchivoAdjunto, pk=pk)
     
-    # Verificación de permisos para que solo el dueño o un superusuario pueda borrar
     if archivo.prospecto.asignado_a != request.user and not request.user.is_superuser:
         return HttpResponseForbidden("No tienes permiso para eliminar este archivo.")
     
     prospecto_pk = archivo.prospecto.pk
     file_name = archivo.nombre
     
-    # Primero elimina el archivo físico de S3
     archivo.archivo.delete(save=False)
-    
-    # Luego elimina el registro de la base de datos
     archivo.delete()
     
     messages.success(request, f"El archivo '{file_name}' ha sido eliminado exitosamente.")
