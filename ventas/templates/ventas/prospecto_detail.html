@@ -243,6 +243,15 @@
             color: white;
             text-decoration: none;
         }
+
+        /* Estilos para archivos adjuntos en móviles */
+        .list-group-item a.list-group-item-action {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .list-group-item small.text-muted {
+            margin-top: 0.25rem;
+        }
     }
 </style>
 
@@ -382,6 +391,10 @@
                         <button class="nav-link" id="nav-recordatorios-tab" data-bs-toggle="tab" data-bs-target="#nav-recordatorios" type="button" role="tab">
                             <i class="fas fa-bell me-2"></i>Recordatorios
                             <span class="badge bg-primary ms-2">{{ recordatorios.count }}</span>
+                        </button>
+                        <button class="nav-link" id="nav-archivos-tab" data-bs-toggle="tab" data-bs-target="#nav-archivos" type="button" role="tab" aria-controls="nav-archivos" aria-selected="false">
+                            <i class="fas fa-paperclip me-2"></i>Archivos Adjuntos
+                            <span class="badge bg-primary ms-2">{{ archivos_adjuntos.count }}</span>
                         </button>
                     </div>
                 </nav>
@@ -576,6 +589,38 @@
                             </div>
                         {% endif %}
                     </div>
+                    
+                    <div class="tab-pane fade p-4" id="nav-archivos" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="mb-0">Archivos Adjuntos</h5>
+                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addFileModal">
+                                <i class="fas fa-plus me-2"></i>Subir Archivo
+                            </button>
+                        </div>
+
+                        {% if archivos_adjuntos %}
+                        <div class="list-group">
+                            {% for archivo in archivos_adjuntos %}
+                            <a href="{{ archivo.archivo.url }}" target="_blank" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center flex-wrap">
+                                <div>
+                                    <i class="fas fa-file me-2 text-primary"></i>
+                                    {{ archivo.nombre }}
+                                </div>
+                                <small class="text-muted">{{ archivo.fecha_subida|date:"d M Y" }}</small>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-file-slash fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No hay archivos adjuntos</h5>
+                            <p class="text-muted">Sube documentos importantes como propuestas, contratos o presentaciones.</p>
+                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addFileModal">
+                                <i class="fas fa-plus me-2"></i>Subir Primer Archivo
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
@@ -625,6 +670,40 @@
                     </button>
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save me-2"></i>Guardar Contacto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addFileModal" tabindex="-1" aria-labelledby="addFileModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addFileModalLabel">
+                    <i class="fas fa-upload me-2"></i>Subir Archivo
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'add-archivo' prospecto.pk %}" method="post" enctype="multipart/form-data">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="{{ archivo_form.nombre.id_for_label }}" class="form-label">Título</label>
+                        {{ archivo_form.nombre }}
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ archivo_form.archivo.id_for_label }}" class="form-label">Archivo</label>
+                        {{ archivo_form.archivo }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload me-2"></i>Subir Archivo
                     </button>
                 </div>
             </form>

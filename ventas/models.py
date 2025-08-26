@@ -212,3 +212,25 @@ class Recordatorio(models.Model):
 
     def __str__(self):
         return self.titulo
+    
+class ArchivoAdjunto(models.Model):
+    """Permite adjuntar archivos a un prospecto."""
+    prospecto = models.ForeignKey(
+        'Prospecto', 
+        on_delete=models.CASCADE, 
+        related_name='archivos_adjuntos'
+    )
+    nombre = models.CharField(max_length=255, verbose_name="Título del Archivo")
+    archivo = models.FileField(
+        upload_to='media/',  # El archivo se guardará en la carpeta 'media/' de tu bucket de S3
+        verbose_name="Archivo Adjunto"
+    )
+    fecha_subida = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-fecha_subida']
+        verbose_name = "Archivo Adjunto"
+        verbose_name_plural = "Archivos Adjuntos"
+
+    def __str__(self):
+        return self.nombre    

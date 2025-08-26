@@ -8,7 +8,7 @@ from django.urls import reverse_lazy, reverse
 from .models import Prospecto, Interaccion, Recordatorio, Etiqueta, Trabajador, ProspectoTrabajador
 from .forms import (
     ProspectoForm, InteraccionForm, RecordatorioForm, TrabajadorForm, 
-    ProspectoTrabajadorForm, ProspectoTrabajadorUpdateForm
+    ProspectoTrabajadorForm, ProspectoTrabajadorUpdateForm,ArchivoAdjuntoForm
 )
 from django.db.models import Count, Q, Avg, Max, Case, When, F, IntegerField
 from django.http import HttpResponseForbidden, HttpResponse
@@ -202,6 +202,7 @@ class ProspectoDetailView(LoginRequiredMixin, OwnerRequiredMixin, DetailView):
         context['interaccion_form'] = InteraccionForm()
         context['recordatorio_form'] = RecordatorioForm()
         context['trabajador_form'] = ProspectoTrabajadorForm()
+        context['archivos_adjuntos'] = self.object.archivos_adjuntos.all() 
         
         trabajadores_asociados_ids = self.object.trabajadores.values_list('id', flat=True)
         context['trabajador_form'].fields['trabajador'].queryset = Trabajador.objects.exclude(id__in=trabajadores_asociados_ids)
@@ -423,3 +424,17 @@ def export_prospectos_excel(request):
             
     workbook.save(response)
     return response
+
+@login_required
+def add_archivo(request, prospecto_pk):
+    prospecto = get_object_or_404(Prospecto, pk=prospecto_pk)
+    if request.method == 'POST':
+        form = ArchivoAdjuntoForm(request.POST, request.FILES)
+        if form.is_valid():
+            archivo_adjunto = form.save(commit=False)
+            archivo_adjunto.prospecto = prospecto
+            archivo_adjunto.save()
+            messages.success(request, "Archivo adjunto subido exitosamente.")
+        else:
+            messages.error(request, "Error al subir el archivo. Por favor, revisa los campos.")
+    return redirect('prospecto-detail', pk=prospecto_pk)

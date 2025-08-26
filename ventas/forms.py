@@ -1,5 +1,5 @@
 from django import forms
-from .models import Prospecto, Interaccion, Recordatorio, Trabajador, ProspectoTrabajador
+from .models import Prospecto, Interaccion, Recordatorio, Trabajador, ProspectoTrabajador, ArchivoAdjunto
 
 class ProspectoForm(forms.ModelForm):
     class Meta:
@@ -87,4 +87,13 @@ class RecordatorioForm(forms.ModelForm):
                 attrs={'class': 'form-control', 'type': 'datetime-local'},
                 format='%Y-%m-%dT%H:%M'
             ),
+        }
+        
+class ArchivoAdjuntoForm(forms.ModelForm):
+    class Meta:
+        model = ArchivoAdjunto
+        fields = ['nombre', 'archivo']
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'archivo': forms.FileInput(attrs={'class': 'form-control'}),
         }
