@@ -23,7 +23,7 @@ from .views import (
     add_trabajador_a_prospecto,
     ProspectoTrabajadorUpdateView,
     ProspectoTrabajadorDeleteView,
-    add_archivo
+    add_archivo,delete_archivo  
 )
 
 urlpatterns = [
@@ -62,4 +62,6 @@ urlpatterns = [
     # --- Relación Prospecto-Trabajador ---
     path('prospecto-trabajador/<int:pk>/editar/', ProspectoTrabajadorUpdateView.as_view(), name='prospecto-trabajador-update'),
     path('prospecto-trabajador/<int:pk>/eliminar/', ProspectoTrabajadorDeleteView.as_view(), name='prospecto-trabajador-delete'),
+    path('archivo/<int:pk>/eliminar/', delete_archivo, name='delete-archivo'),
+
 ]

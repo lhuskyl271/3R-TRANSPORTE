@@ -440,3 +440,23 @@ def add_archivo(request, prospecto_pk):
         else:
             messages.error(request, "Error al subir el archivo. Por favor, revisa los campos.")
     return redirect('prospecto-detail', pk=prospecto_pk)
+
+@login_required
+def delete_archivo(request, pk):
+    archivo = get_object_or_404(ArchivoAdjunto, pk=pk)
+    
+    # Verificación de permisos para que solo el dueño o un superusuario pueda borrar
+    if archivo.prospecto.asignado_a != request.user and not request.user.is_superuser:
+        return HttpResponseForbidden("No tienes permiso para eliminar este archivo.")
+    
+    prospecto_pk = archivo.prospecto.pk
+    file_name = archivo.nombre
+    
+    # Primero elimina el archivo físico de S3
+    archivo.archivo.delete(save=False)
+    
+    # Luego elimina el registro de la base de datos
+    archivo.delete()
+    
+    messages.success(request, f"El archivo '{file_name}' ha sido eliminado exitosamente.")
+    return redirect('prospecto-detail', pk=prospecto_pk)
