@@ -222,10 +222,12 @@ class ArchivoAdjunto(models.Model):
         related_name='archivos_adjuntos'
     )
     nombre = models.CharField(max_length=255, verbose_name="Título del Archivo")
+    
     archivo = models.FileField(
-        upload_to='media/',
+        upload_to='',
         verbose_name="Archivo Adjunto"
     )
+    
     fecha_subida = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -235,5 +237,4 @@ class ArchivoAdjunto(models.Model):
 
     def __str__(self):
         return self.nombre
-    
     
