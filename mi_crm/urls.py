@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from ventas import views as ventas_views
 from django.conf import settings
-
+from django.conf.urls.static import static  # ✅ ¡Añade esta línea!
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -23,3 +23,7 @@ urlpatterns = [
     path('recordatorio/<int:pk>/toggle/', ventas_views.toggle_recordatorio, name='toggle-recordatorio'),
     path('', include('ventas.urls')),
 ]
+
+# 👇 Pega este bloque al final del archivo
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
