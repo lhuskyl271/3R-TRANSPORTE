@@ -223,10 +223,8 @@ class ArchivoAdjunto(models.Model):
     )
     nombre = models.CharField(max_length=255, verbose_name="Título del Archivo")
     
-    archivo = models.FileField(
-        upload_to='archivos/',
-        verbose_name="Archivo Adjunto"
-    )
+    archivo = models.FileField(upload_to='media/', verbose_name="Archivo Adjunto")
+
     
     fecha_subida = models.DateTimeField(auto_now_add=True)
 
