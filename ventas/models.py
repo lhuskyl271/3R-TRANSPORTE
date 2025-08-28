@@ -224,7 +224,7 @@ class ArchivoAdjunto(models.Model):
     nombre = models.CharField(max_length=255, verbose_name="Título del Archivo")
     
     archivo = models.FileField(
-        upload_to='media/',
+        upload_to='',
         verbose_name="Archivo Adjunto"
     )
     
