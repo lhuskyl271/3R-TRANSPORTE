@@ -426,24 +426,42 @@ def export_prospectos_excel(request):
 # --- FUNCIÓN MODIFICADA PARA CAPTURAR ERRORES ---
 @login_required
 def add_archivo(request, prospecto_pk):
+    """
+    Gestiona la subida de un nuevo archivo adjunto para un prospecto específico.
+    """
+    # 1. Obtiene el objeto del prospecto al que se adjuntará el archivo.
+    #    Si no se encuentra, devuelve un error 404.
     prospecto = get_object_or_404(Prospecto, pk=prospecto_pk)
+
+    # 2. Procesa el formulario solo si la petición es de tipo POST.
     if request.method == 'POST':
+        # 3. Crea una instancia del formulario con los datos de texto (request.POST)
+        #    y los datos del archivo (request.FILES).
         form = ArchivoAdjuntoForm(request.POST, request.FILES)
+
+        # 4. Valida el formulario.
         if form.is_valid():
             try:
+                # 5. Si es válido, crea el objeto del modelo pero no lo guardes aún en la BD.
                 archivo_adjunto = form.save(commit=False)
+                # 6. Asigna la relación con el prospecto.
                 archivo_adjunto.prospecto = prospecto
+                # 7. Ahora guarda el objeto. Aquí es donde django-storages
+                #    intentará subir el archivo a S3.
                 archivo_adjunto.save()
+                
                 messages.success(request, "Archivo adjunto subido exitosamente.")
+
             except Exception as e:
-                # Esto atrapará cualquier error durante la subida a S3
-                # y lo mostrará como un mensaje de error en la pantalla.
+                # 8. Si ocurre cualquier error durante el .save() (ej. un error de
+                #    permisos de S3), lo captura y muestra en pantalla.
                 messages.error(request, f"Error al contactar el servidor de archivos: {e}")
         else:
-            # Esto mostrará errores de validación si el formulario no es válido
+            # 9. Si el formulario no es válido, muestra los errores de validación.
             error_string = " ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()])
             messages.error(request, f"Error en el formulario. Por favor, revisa los campos. Detalles: {error_string}")
             
+    # 10. Redirige al usuario de vuelta a la página de detalles del prospecto.
     return redirect('prospecto-detail', pk=prospecto_pk)
 
 
