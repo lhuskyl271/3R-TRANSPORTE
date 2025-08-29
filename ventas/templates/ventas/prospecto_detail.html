@@ -563,12 +563,16 @@
                     
                     <div class="tab-pane fade p-4" id="nav-archivos" role="tabpanel">
                         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
-                            <h5 class="mb-0 me-2">Archivos Adjuntos</h5>
-                            <button class="btn btn-sm btn-primary mt-2 mt-md-0" data-bs-toggle="modal" data-bs-target="#addFileModal">
-                                <i class="fas fa-plus me-2"></i>Subir Archivo
-                            </button>
+                            <h5 class="mb-0 me-3">Archivos del Prospecto</h5>
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-primary mt-2 mt-md-0" data-bs-toggle="modal" data-bs-target="#addFileModal">
+                                    <i class="fas fa-plus me-2"></i>Subir Archivo
+                                </button>
+                                <button class="btn btn-sm btn-info mt-2 mt-md-0" data-bs-toggle="modal" data-bs-target="#manualUploadModal" title="Herramienta de diagnóstico">
+                                    <i class="fas fa-cloud-upload-alt me-2"></i>Subida Manual (Test)
+                                </button>
+                            </div>
                         </div>
-
                         {% if archivos_adjuntos %}
                         <div class="list-group">
                             {% for archivo in archivos_adjuntos %}
@@ -682,4 +686,37 @@
     </div>
 </div>
 
+<div class="modal fade" id="manualUploadModal" tabindex="-1" aria-labelledby="manualUploadModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="manualUploadModalLabel">
+                    <i class="fas fa-cloud-upload-alt me-2"></i>Subida Manual a S3 (Test)
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'upload_to_s3_manual' %}" method="post" enctype="multipart/form-data">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="alert alert-info small">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Esta es una herramienta de diagnóstico. El archivo subido aquí **no** quedará asociado a este prospecto.
+                    </div>
+                    <div class="mb-3">
+                        <label for="manualArchivoInput" class="form-label fw-bold">Seleccionar Archivo de Prueba</label>
+                        <input class="form-control" type="file" id="manualArchivoInput" name="archivo" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-info">
+                        <i class="fas fa-cogs me-2"></i>Ejecutar Subida de Prueba
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
