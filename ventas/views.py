@@ -469,6 +469,70 @@ def add_archivo(request, prospecto_pk):
             
     return redirect('prospecto-detail', pk=prospecto_pk)
 
+# views.py
+
+import boto3
+import os
+from django.conf import settings
+from django.http import HttpResponse
+from botocore.exceptions import NoCredentialsError, BotoCoreError
+
+def upload_to_s3_manual(request):
+    """
+    A view that mimics the provided PHP script to upload a file directly to S3.
+    """
+    if request.method != 'POST':
+        return HttpResponse("This view only accepts POST requests.", status=405)
+
+    # === LÓGICA DE SUBIDA ===
+    # 1. Check if the file is present and was uploaded correctly
+    # Corresponds to: if (!isset($_FILES['archivo']) || $_FILES['archivo']['error'] !== UPLOAD_ERR_OK)
+    archivo = request.FILES.get('archivo')
+    if not archivo:
+        return HttpResponse("Error: No file was uploaded.", status=400)
+
+    # 2. Define the destination folder and final filename
+    # Corresponds to: $nombreFinal = basename($_FILES['archivo']['name']);
+    folder = "manual-uploads"  # You can define any folder you want
+    nombre_final = os.path.basename(archivo.name)
+    s3_key = f"{folder}/{nombre_final}"
+
+    try:
+        # 3. Initialize the S3 client
+        # Corresponds to: $s3 = new S3Client([...]);
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_S3_REGION_NAME
+        )
+
+        # 4. Upload the file to the bucket
+        # Corresponds to: $s3->putObject([...]);
+        # We use upload_fileobj which is efficient for handling file-like objects from Django
+        s3_client.upload_fileobj(
+            archivo,  # The file object itself
+            settings.AWS_STORAGE_BUCKET_NAME,
+            s3_key    # The full path (Key) in the bucket
+        )
+        
+        # 5. Generate the public URL of the uploaded file
+        bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+        region = settings.AWS_S3_REGION_NAME
+        file_url = f"https://{bucket_name}.s3.{region}.amazonaws.com/{s3_key}"
+
+        # 6. Return a success response
+        # Corresponds to: echo "<h3>Archivo subido correctamente ✅</h3>";
+        return HttpResponse(f"<h3>Archivo subido correctamente ✅</h3><p>URL del archivo: <a href='{file_url}' target='_blank'>{file_url}</a></p>")
+
+    except NoCredentialsError:
+        return HttpResponse("<h3>Error al subir a S3 ❌</h3><p>Credentials not available.</p>", status=500)
+    except BotoCoreError as e:
+        # Corresponds to: catch (AwsException $e)
+        return HttpResponse(f"<h3>Error al subir a S3 ❌</h3><p>Mensaje: {e}</p>", status=500)
+    except Exception as e:
+        return HttpResponse(f"<h3>Ocurrió un error inesperado ❌</h3><p>Mensaje: {e}</p>", status=500)
+
 
 @login_required
 def delete_archivo(request, pk):
