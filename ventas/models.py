@@ -223,8 +223,11 @@ class ArchivoAdjunto(models.Model):
     )
     nombre = models.CharField(max_length=255, verbose_name="Título del Archivo")
     
+    # --- LÍNEA CORREGIDA ---
+    # Se especifica un directorio para organizar los archivos.
+    # Puedes usar %Y/%m/ para organizar por año y mes automáticamente.
     archivo = models.FileField(
-        upload_to='',
+        upload_to='archivos_adjuntos/%Y/%m/', 
         verbose_name="Archivo Adjunto"
     )
     
