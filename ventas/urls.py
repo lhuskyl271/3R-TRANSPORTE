@@ -23,7 +23,9 @@ from .views import (
     add_trabajador_a_prospecto,
     ProspectoTrabajadorUpdateView,
     ProspectoTrabajadorDeleteView,
-    add_archivo,delete_archivo  
+    add_archivo,
+    delete_archivo,
+    upload_to_s3_manual  
 )
 
 urlpatterns = [
@@ -52,7 +54,6 @@ urlpatterns = [
     path('recordatorio/<int:pk>/editar/', RecordatorioUpdateView.as_view(), name='recordatorio-update'),
     path('recordatorio/<int:pk>/eliminar/', RecordatorioDeleteView.as_view(), name='recordatorio-delete'),
     path('recordatorio/<int:pk>/toggle/', toggle_recordatorio, name='toggle-recordatorio'),
-    path('upload-manual/', views.upload_to_s3_manual, name='upload_to_s3_manual'),
     
     # --- Trabajadores ---
     path('trabajadores/', TrabajadorListView.as_view(), name='trabajador-list'),
@@ -63,6 +64,10 @@ urlpatterns = [
     # --- Relación Prospecto-Trabajador ---
     path('prospecto-trabajador/<int:pk>/editar/', ProspectoTrabajadorUpdateView.as_view(), name='prospecto-trabajador-update'),
     path('prospecto-trabajador/<int:pk>/eliminar/', ProspectoTrabajadorDeleteView.as_view(), name='prospecto-trabajador-delete'),
+    
+    # --- Archivos ---
     path('archivo/<int:pk>/eliminar/', delete_archivo, name='delete-archivo'),
 
+    # --- Herramienta de subida manual a S3 ---
+    path('upload-manual/', upload_to_s3_manual, name='upload_to_s3_manual'), 
 ]
