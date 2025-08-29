@@ -426,42 +426,46 @@ def export_prospectos_excel(request):
 # --- FUNCIÓN MODIFICADA PARA CAPTURAR ERRORES ---
 @login_required
 def add_archivo(request, prospecto_pk):
-    """
-    Gestiona la subida de un nuevo archivo adjunto para un prospecto específico.
-    """
-    # 1. Obtiene el objeto del prospecto al que se adjuntará el archivo.
-    #    Si no se encuentra, devuelve un error 404.
     prospecto = get_object_or_404(Prospecto, pk=prospecto_pk)
 
-    # 2. Procesa el formulario solo si la petición es de tipo POST.
     if request.method == 'POST':
-        # 3. Crea una instancia del formulario con los datos de texto (request.POST)
-        #    y los datos del archivo (request.FILES).
         form = ArchivoAdjuntoForm(request.POST, request.FILES)
-
-        # 4. Valida el formulario.
         if form.is_valid():
             try:
-                # 5. Si es válido, crea el objeto del modelo pero no lo guardes aún en la BD.
+                # 1. Obtenemos el objeto del archivo subido desde el formulario validado
+                uploaded_file = form.cleaned_data['archivo']
+
+                # 2. Definimos la carpeta de destino manualmente (como en tu script PHP)
+                #    Podemos usar datos del prospecto para que sea dinámico.
+                folder = f"prospectos/{prospecto.pk}/adjuntos"
+
+                # 3. Construimos la ruta final (el "Key" de S3)
+                #    Usamos os.path.basename para seguridad, igual que basename() en PHP.
+                nombre_final = os.path.basename(uploaded_file.name)
+                ruta_en_s3 = f"{folder}/{nombre_final}"
+
+                # 4. Creamos la instancia del modelo, pero aún no la guardamos en la BD.
+                #    Esto nos permite llenar los campos 'nombre' y 'prospecto'.
                 archivo_adjunto = form.save(commit=False)
-                # 6. Asigna la relación con el prospecto.
                 archivo_adjunto.prospecto = prospecto
-                # 7. Ahora guarda el objeto. Aquí es donde django-storages
-                #    intentará subir el archivo a S3.
-                archivo_adjunto.save()
+
+                # 5. ¡Este es el paso clave! Guardamos el archivo manualmente en el campo FileField.
+                #    El método .save() del campo se encarga de:
+                #    - Usar el storage configurado (S3 en este caso).
+                #    - Subir el contenido del archivo (`uploaded_file`).
+                #    - Guardarlo en la ruta exacta que especificamos (`ruta_en_s3`).
+                #    - Guardar la instancia del modelo (`archivo_adjunto`) en la base de datos.
+                archivo_adjunto.archivo.save(ruta_en_s3, uploaded_file)
                 
-                messages.success(request, "Archivo adjunto subido exitosamente.")
+                messages.success(request, f"Archivo '{nombre_final}' subido a la ruta personalizada.")
 
             except Exception as e:
-                # 8. Si ocurre cualquier error durante el .save() (ej. un error de
-                #    permisos de S3), lo captura y muestra en pantalla.
-                messages.error(request, f"Error al contactar el servidor de archivos: {e}")
+                messages.error(request, f"Error al subir el archivo manualmente: {e}")
         else:
-            # 9. Si el formulario no es válido, muestra los errores de validación.
+            # ... (manejo de errores del formulario)
             error_string = " ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()])
-            messages.error(request, f"Error en el formulario. Por favor, revisa los campos. Detalles: {error_string}")
+            messages.error(request, f"Error en el formulario. Detalles: {error_string}")
             
-    # 10. Redirige al usuario de vuelta a la página de detalles del prospecto.
     return redirect('prospecto-detail', pk=prospecto_pk)
 
 
