@@ -52,6 +52,7 @@ urlpatterns = [
     path('recordatorio/<int:pk>/editar/', RecordatorioUpdateView.as_view(), name='recordatorio-update'),
     path('recordatorio/<int:pk>/eliminar/', RecordatorioDeleteView.as_view(), name='recordatorio-delete'),
     path('recordatorio/<int:pk>/toggle/', toggle_recordatorio, name='toggle-recordatorio'),
+    path('upload-manual/', views.upload_to_s3_manual, name='upload_to_s3_manual'),
     
     # --- Trabajadores ---
     path('trabajadores/', TrabajadorListView.as_view(), name='trabajador-list'),
