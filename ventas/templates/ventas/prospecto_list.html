@@ -682,7 +682,6 @@
             </a>
         </div>
 
-        <!-- Vista de tabla para escritorio -->
         <div class="table-container">
             <table class="table">
                 <thead>
@@ -753,7 +752,6 @@
             </table>
         </div>
         
-        <!-- Vista de tarjetas para móviles -->
         <div class="mobile-cards-view">
             {% for prospecto in prospectos %}
             <div class="prospecto-card">
@@ -892,5 +890,27 @@
             </div>
         {% endif %}
     </div>
-</div>
+
+    <div class="data-panel">
+        <div class="toolbar">
+            <h5 class="mb-0 fw-bold" style="color: var(--text-primary);">Herramienta: Subida Manual a S3</h5>
+        </div>
+        <div class="p-4">
+            <p class="text-muted small mb-3">
+                Utiliza este formulario para subir un archivo de prueba directamente a tu bucket de S3. 
+                Esta es una herramienta de diagnóstico y no asocia el archivo a ningún prospecto.
+            </p>
+            <form action="{% url 'upload_to_s3_manual' %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="archivoInput" class="form-label">Seleccionar archivo</label>
+                    <input class="form-control" type="file" id="archivoInput" name="archivo" required>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-cloud-upload-alt me-2"></i>Subir Archivo
+                </button>
+            </form>
+        </div>
+    </div>
+    </div>
 {% endblock %}
