@@ -406,7 +406,8 @@ def export_prospectos_excel(request):
             ", ".join([t.nombre for t in prospecto.trabajadores.all()]),
             ", ".join([e.nombre for e in prospecto.etiquetas.all()]),
             prospecto.asignado_a.username if prospecto.asignado_a else '',
-            prospecto.fecha_creacion.strftime('%Y-%m-%d %H:%M') if prospecto.fecha_creation else ''
+            # Se cambió 'fecha_creation' por 'fecha_creacion'
+            prospecto.fecha_creacion.strftime('%Y-%m-%d %H:%M') if prospecto.fecha_creacion else ''
         ]
         for col_num, cell_value in enumerate(row_data, 1):
             worksheet.cell(row=row_num, column=col_num, value=cell_value)
@@ -426,7 +427,6 @@ def export_prospectos_excel(request):
             
     workbook.save(response)
     return response
-
 
 @login_required
 def add_archivo(request, prospecto_pk):
