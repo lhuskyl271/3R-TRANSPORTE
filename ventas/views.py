@@ -427,15 +427,12 @@ def export_prospectos_excel(request):
     workbook.save(response)
     return response
 
-# ==============================================================================
-# VISTAS FINALES PARA MANEJO DE ARCHIVOS EN S3
-# ==============================================================================
 
 @login_required
 def add_archivo(request, prospecto_pk):
     """
     Gestiona la subida de un archivo a S3 usando Boto3 directamente y lo asocia
-    con un prospecto específico.
+    con un prospecto específico. El nombre del archivo se toma automáticamente.
     """
     prospecto = get_object_or_404(Prospecto, pk=prospecto_pk)
     if request.method != 'POST':
@@ -443,36 +440,33 @@ def add_archivo(request, prospecto_pk):
 
     form = ArchivoAdjuntoForm(request.POST, request.FILES)
     if form.is_valid():
-        uploaded_file = form.cleaned_data['archivo']
-        titulo_archivo = form.cleaned_data['nombre']
 
-        # Construimos una ruta organizada para el archivo en S3
+        uploaded_file = form.cleaned_data['archivo']
+        # El título del archivo ahora es el nombre original del archivo subido.
+        titulo_archivo = uploaded_file.name 
+
         aws_location = settings.AWS_LOCATION
+        # Limpiamos el nombre del archivo para crear la ruta en S3
         nombre_base, extension = os.path.splitext(uploaded_file.name)
-        # ej: media/prospectos/123/documento_propuesta.pdf
         s3_key = f"{aws_location}/prospectos/{prospecto.pk}/{nombre_base}{extension}"
 
         try:
-            # Inicializar cliente de S3
             s3_client = boto3.client(
                 's3',
                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
                 aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
                 region_name=settings.AWS_S3_REGION_NAME
             )
-
-            # Subir archivo al bucket
             s3_client.upload_fileobj(
                 uploaded_file,
                 settings.AWS_STORAGE_BUCKET_NAME,
                 s3_key
             )
             
-            # Una vez subido, creamos el registro en la base de datos
             archivo_adjunto = ArchivoAdjunto(
                 prospecto=prospecto,
-                nombre=titulo_archivo,
-                archivo=s3_key  # Guardamos la ruta (key) de S3 en el campo
+                nombre=titulo_archivo, # Usamos el nombre del archivo como título
+                archivo=s3_key
             )
             archivo_adjunto.save()
 
@@ -518,8 +512,6 @@ def delete_archivo(request, pk):
             Bucket=settings.AWS_STORAGE_BUCKET_NAME,
             Key=s3_key
         )
-
-        # Si la eliminación en S3 fue exitosa, eliminamos el registro de la BD
         archivo.delete()
         
         messages.success(request, f"El archivo '{file_name}' ha sido eliminado exitosamente.")
