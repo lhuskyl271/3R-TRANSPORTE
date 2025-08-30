@@ -24,8 +24,7 @@ from .views import (
     ProspectoTrabajadorUpdateView,
     ProspectoTrabajadorDeleteView,
     add_archivo,
-    delete_archivo,
-    upload_to_s3_manual  
+    delete_archivo
 )
 
 urlpatterns = [
@@ -67,7 +66,4 @@ urlpatterns = [
     
     # --- Archivos ---
     path('archivo/<int:pk>/eliminar/', delete_archivo, name='delete-archivo'),
-
-    # --- Herramienta de subida manual a S3 ---
-    path('upload-manual/', upload_to_s3_manual, name='upload_to_s3_manual'), 
 ]
