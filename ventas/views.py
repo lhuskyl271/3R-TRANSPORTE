@@ -440,15 +440,14 @@ def add_archivo(request, prospecto_pk):
 
     form = ArchivoAdjuntoForm(request.POST, request.FILES)
     if form.is_valid():
-
         uploaded_file = form.cleaned_data['archivo']
-        # El título del archivo ahora es el nombre original del archivo subido.
-        titulo_archivo = uploaded_file.name 
+        titulo_archivo = uploaded_file.name
 
-        aws_location = settings.AWS_LOCATION
-        # Limpiamos el nombre del archivo para crear la ruta en S3
-        nombre_base, extension = os.path.splitext(uploaded_file.name)
-        s3_key = f"{aws_location}/prospectos/{prospecto.pk}/{nombre_base}{extension}"
+        # --- CORRECCIÓN IMPORTANTE ---
+        # Construimos la ruta RELATIVA, SIN el prefijo 'media/'.
+        # Django-storages lo añadirá automáticamente al generar la URL.
+        # ej: prospectos/7/documento_propuesta.pdf
+        s3_key = f"prospectos/{prospecto.pk}/{titulo_archivo}"
 
         try:
             s3_client = boto3.client(
@@ -457,16 +456,21 @@ def add_archivo(request, prospecto_pk):
                 aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
                 region_name=settings.AWS_S3_REGION_NAME
             )
+
+            # La ruta de subida necesita el prefijo 'media/' porque Boto3 no lo conoce.
+            full_s3_path = f"{settings.AWS_LOCATION}/{s3_key}"
+
             s3_client.upload_fileobj(
                 uploaded_file,
                 settings.AWS_STORAGE_BUCKET_NAME,
-                s3_key
+                full_s3_path
             )
             
+            # Guardamos en la base de datos la ruta SIN el prefijo 'media/'.
             archivo_adjunto = ArchivoAdjunto(
                 prospecto=prospecto,
-                nombre=titulo_archivo, # Usamos el nombre del archivo como título
-                archivo=s3_key
+                nombre=titulo_archivo,
+                archivo=s3_key # <-- Se guarda la ruta relativa
             )
             archivo_adjunto.save()
 
@@ -496,10 +500,12 @@ def delete_archivo(request, pk):
     
     prospecto_pk = archivo.prospecto.pk
     file_name = archivo.nombre
-    s3_key = archivo.archivo.name # Obtenemos la ruta del archivo en S3
+    
+    # --- CORRECCIÓN IMPORTANTE ---
+    # La ruta completa en S3 incluye el prefijo 'media/'
+    full_s3_path = archivo.archivo.name
 
     try:
-        # Inicializar cliente de S3
         s3_client = boto3.client(
             's3',
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
@@ -507,17 +513,17 @@ def delete_archivo(request, pk):
             region_name=settings.AWS_S3_REGION_NAME
         )
         
-        # Eliminar el objeto de S3
         s3_client.delete_object(
             Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-            Key=s3_key
+            Key=full_s3_path
         )
+
         archivo.delete()
         
         messages.success(request, f"El archivo '{file_name}' ha sido eliminado exitosamente.")
 
     except (BotoCoreError, NoCredentialsError) as e:
-        messages.error(request, f"Error de configuración o conexión con S3 al intentar borrar: {e}")
+        messages.error(request, f"Error de conexión con S3 al intentar borrar: {e}")
     except Exception as e:
         messages.error(request, f"No se pudo eliminar el archivo del servidor: {e}")
 
