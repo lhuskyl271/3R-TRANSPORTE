@@ -120,7 +120,6 @@
         transform: scale(1.1);
     }
     
-    /* Estilo para enlace de teléfono */
     .phone-link {
         color: inherit;
         text-decoration: none;
@@ -141,88 +140,6 @@
     
     .phone-wrapper:hover {
         background-color: rgba(52, 152, 219, 0.1);
-    }
-    
-    /* Estilos responsive para móviles */
-    @media (max-width: 768px) {
-        .prospecto-header {
-            padding: 1rem;
-            text-align: center;
-        }
-        
-        .prospecto-header h1 {
-            font-size: 1.5rem;
-        }
-        
-        .btn-group {
-            width: 100%;
-            justify-content: center;
-            margin-top: 1rem !important;
-        }
-        
-        .btn-group .btn {
-            margin: 0 0.25rem;
-        }
-        
-        .interest-highlight {
-            padding: 1rem;
-        }
-        
-        .nav-tabs .nav-link {
-            font-size: 0.8rem;
-            padding: 0.5rem;
-        }
-        
-        .nav-tabs .nav-link i {
-            margin-right: 0.25rem;
-        }
-        
-        .reminder-actions {
-            display: flex;
-            flex-wrap: wrap;
-            margin-top: 0.5rem;
-        }
-        
-        .reminder-actions .btn {
-            margin: 0.25rem;
-            font-size: 0.8rem;
-            padding: 0.25rem 0.5rem;
-        }
-
-        .card-body {
-            padding: 1rem;
-        }
-        
-        .tab-pane {
-            padding: 1rem !important;
-        }
-        
-        /* Estilos específicos para enlace de teléfono en móviles */
-        .phone-link {
-            display: block;
-            padding: 0.75rem;
-            background-color: var(--primary-color);
-            color: white !important;
-            border-radius: var(--border-radius);
-            text-align: center;
-            font-weight: bold;
-            margin-top: 0.5rem;
-            text-decoration: none;
-        }
-        
-        .phone-link:hover {
-            background-color: var(--secondary-color);
-            text-decoration: none;
-        }
-
-        /* Estilos para archivos adjuntos en móviles */
-        .list-group-item.list-group-item-action {
-            flex-direction: column;
-            align-items: flex-start !important;
-        }
-        .list-group-item small.text-muted {
-            margin-top: 0.25rem;
-        }
     }
 </style>
 
@@ -269,7 +186,7 @@
                                     <div class="phone-wrapper">
                                         {{ prospecto.telefono }}
                                     </div>
-                                </a>
+                                a>
                             {% else %}
                                 <p class="mb-0 text-muted">No especificado</p>
                             {% endif %}
@@ -319,7 +236,6 @@
                                 </p>
                               </div>
                             </div>
-
                         </div>
                         <hr>
                         <div class="d-flex align-items-center">
@@ -564,14 +480,9 @@
                     <div class="tab-pane fade p-4" id="nav-archivos" role="tabpanel">
                         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
                             <h5 class="mb-0 me-3">Archivos del Prospecto</h5>
-                            <div class="btn-group">
-                                <button class="btn btn-sm btn-primary mt-2 mt-md-0" data-bs-toggle="modal" data-bs-target="#addFileModal">
-                                    <i class="fas fa-plus me-2"></i>Subir Archivo
-                                </button>
-                                <button class="btn btn-sm btn-info mt-2 mt-md-0" data-bs-toggle="modal" data-bs-target="#manualUploadModal" title="Herramienta de diagnóstico">
-                                    <i class="fas fa-cloud-upload-alt me-2"></i>Subida Manual (Test)
-                                </button>
-                            </div>
+                            <button class="btn btn-sm btn-primary mt-2 mt-md-0" data-bs-toggle="modal" data-bs-target="#addFileModal">
+                                <i class="fas fa-plus me-2"></i>Subir Archivo
+                            </button>
                         </div>
                         {% if archivos_adjuntos %}
                         <div class="list-group">
@@ -686,37 +597,6 @@
     </div>
 </div>
 
-<div class="modal fade" id="manualUploadModal" tabindex="-1" aria-labelledby="manualUploadModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="manualUploadModalLabel">
-                    <i class="fas fa-cloud-upload-alt me-2"></i>Subida Manual a S3 (Test)
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{% url 'upload_to_s3_manual' %}" method="post" enctype="multipart/form-data">
-                <div class="modal-body">
-                    {% csrf_token %}
-                    <div class="alert alert-info small">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Esta es una herramienta de diagnóstico. El archivo subido aquí **no** quedará asociado a este prospecto.
-                    </div>
-                    <div class="mb-3">
-                        <label for="manualArchivoInput" class="form-label fw-bold">Seleccionar Archivo de Prueba</label>
-                        <input class="form-control" type="file" id="manualArchivoInput" name="archivo" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-2"></i>Cancelar
-                    </button>
-                    <button type="submit" class="btn btn-info">
-                        <i class="fas fa-cogs me-2"></i>Ejecutar Subida de Prueba
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+{% endblock %}
 </div>
 {% endblock %}
