@@ -1,5 +1,9 @@
 # ventas/views.py
 
+import boto3
+import os
+from botocore.exceptions import BotoCoreError, NoCredentialsError
+from django.conf import settings
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
@@ -12,18 +16,18 @@ from .forms import (
     ProspectoForm, InteraccionForm, RecordatorioForm, TrabajadorForm, 
     ProspectoTrabajadorForm, ProspectoTrabajadorUpdateForm, ArchivoAdjuntoForm
 )
-from django.db.models import Count, Q, Avg, Max, Case, When, F, IntegerField
+from django.db.models import Count, Q, Avg
 from django.http import HttpResponseForbidden, HttpResponse
 from openpyxl import Workbook
 from django.contrib import messages
-from django.db.models.functions import ExtractDay, Now, Extract
-from openpyxl.styles import Font, Alignment
+from django.db.models.functions import ExtractDay, Now
+from openpyxl.styles import Font
 from django.utils import timezone
 import json
 from datetime import timedelta
 import pytz 
-import os
 from django.core.paginator import Paginator
+from django.db.models import Subquery, OuterRef, Case, When, F, IntegerField
 
 
 # ==============================================================================
@@ -93,7 +97,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         ).values('trabajador__nombre').annotate(promedio=Avg('calificacion')).order_by('-promedio')
         context['promedio_calificaciones_trabajador'] = promedio_calificaciones
 
-        from django.db.models import Subquery, OuterRef
         ultima_interaccion_subquery = Interaccion.objects.filter(
             prospecto=OuterRef('pk')
         ).order_by('-fecha').values('fecha')[:1]
@@ -403,7 +406,7 @@ def export_prospectos_excel(request):
             ", ".join([t.nombre for t in prospecto.trabajadores.all()]),
             ", ".join([e.nombre for e in prospecto.etiquetas.all()]),
             prospecto.asignado_a.username if prospecto.asignado_a else '',
-            prospecto.fecha_creacion.strftime('%Y-%m-%d %H:%M') if prospecto.fecha_creacion else ''
+            prospecto.fecha_creacion.strftime('%Y-%m-%d %H:%M') if prospecto.fecha_creation else ''
         ]
         for col_num, cell_value in enumerate(row_data, 1):
             worksheet.cell(row=row_num, column=col_num, value=cell_value)
@@ -424,128 +427,106 @@ def export_prospectos_excel(request):
     workbook.save(response)
     return response
 
-# --- FUNCIÓN MODIFICADA PARA CAPTURAR ERRORES ---
+# ==============================================================================
+# VISTAS FINALES PARA MANEJO DE ARCHIVOS EN S3
+# ==============================================================================
+
 @login_required
 def add_archivo(request, prospecto_pk):
+    """
+    Gestiona la subida de un archivo a S3 usando Boto3 directamente y lo asocia
+    con un prospecto específico.
+    """
     prospecto = get_object_or_404(Prospecto, pk=prospecto_pk)
-
-    if request.method == 'POST':
-        form = ArchivoAdjuntoForm(request.POST, request.FILES)
-        if form.is_valid():
-            try:
-                # 1. Obtenemos el objeto del archivo subido desde el formulario validado
-                uploaded_file = form.cleaned_data['archivo']
-
-                # 2. Definimos la carpeta de destino manualmente (como en tu script PHP)
-                #    Podemos usar datos del prospecto para que sea dinámico.
-                folder = f"prospectos/{prospecto.pk}/adjuntos"
-
-                # 3. Construimos la ruta final (el "Key" de S3)
-                #    Usamos os.path.basename para seguridad, igual que basename() en PHP.
-                nombre_final = os.path.basename(uploaded_file.name)
-                ruta_en_s3 = f"{folder}/{nombre_final}"
-
-                # 4. Creamos la instancia del modelo, pero aún no la guardamos en la BD.
-                #    Esto nos permite llenar los campos 'nombre' y 'prospecto'.
-                archivo_adjunto = form.save(commit=False)
-                archivo_adjunto.prospecto = prospecto
-
-                # 5. ¡Este es el paso clave! Guardamos el archivo manualmente en el campo FileField.
-                #    El método .save() del campo se encarga de:
-                #    - Usar el storage configurado (S3 en este caso).
-                #    - Subir el contenido del archivo (`uploaded_file`).
-                #    - Guardarlo en la ruta exacta que especificamos (`ruta_en_s3`).
-                #    - Guardar la instancia del modelo (`archivo_adjunto`) en la base de datos.
-                archivo_adjunto.archivo.save(ruta_en_s3, uploaded_file)
-                
-                messages.success(request, f"Archivo '{nombre_final}' subido a la ruta personalizada.")
-
-            except Exception as e:
-                messages.error(request, f"Error al subir el archivo manualmente: {e}")
-        else:
-            # ... (manejo de errores del formulario)
-            error_string = " ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()])
-            messages.error(request, f"Error en el formulario. Detalles: {error_string}")
-            
-    return redirect('prospecto-detail', pk=prospecto_pk)
-
-# views.py
-
-import boto3
-import os
-from django.conf import settings
-from django.http import HttpResponse
-from botocore.exceptions import NoCredentialsError, BotoCoreError
-
-def upload_to_s3_manual(request):
-    """
-    A view that mimics the provided PHP script to upload a file directly to S3.
-    """
     if request.method != 'POST':
         return HttpResponse("This view only accepts POST requests.", status=405)
 
-    # === LÓGICA DE SUBIDA ===
-    # 1. Check if the file is present and was uploaded correctly
-    # Corresponds to: if (!isset($_FILES['archivo']) || $_FILES['archivo']['error'] !== UPLOAD_ERR_OK)
-    archivo = request.FILES.get('archivo')
-    if not archivo:
-        return HttpResponse("Error: No file was uploaded.", status=400)
+    form = ArchivoAdjuntoForm(request.POST, request.FILES)
+    if form.is_valid():
+        uploaded_file = form.cleaned_data['archivo']
+        titulo_archivo = form.cleaned_data['nombre']
 
-    # 2. Define the destination folder and final filename
-    # Corresponds to: $nombreFinal = basename($_FILES['archivo']['name']);
-    folder = "manual-uploads"  # You can define any folder you want
-    nombre_final = os.path.basename(archivo.name)
-    s3_key = f"{folder}/{nombre_final}"
+        # Construimos una ruta organizada para el archivo en S3
+        aws_location = settings.AWS_LOCATION
+        nombre_base, extension = os.path.splitext(uploaded_file.name)
+        # ej: media/prospectos/123/documento_propuesta.pdf
+        s3_key = f"{aws_location}/prospectos/{prospecto.pk}/{nombre_base}{extension}"
+
+        try:
+            # Inicializar cliente de S3
+            s3_client = boto3.client(
+                's3',
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                region_name=settings.AWS_S3_REGION_NAME
+            )
+
+            # Subir archivo al bucket
+            s3_client.upload_fileobj(
+                uploaded_file,
+                settings.AWS_STORAGE_BUCKET_NAME,
+                s3_key
+            )
+            
+            # Una vez subido, creamos el registro en la base de datos
+            archivo_adjunto = ArchivoAdjunto(
+                prospecto=prospecto,
+                nombre=titulo_archivo,
+                archivo=s3_key  # Guardamos la ruta (key) de S3 en el campo
+            )
+            archivo_adjunto.save()
+
+            messages.success(request, f"Archivo '{titulo_archivo}' subido exitosamente.")
+
+        except (BotoCoreError, NoCredentialsError) as e:
+            messages.error(request, f"Error de configuración o conexión con S3: {e}")
+        except Exception as e:
+            messages.error(request, f"Ocurrió un error inesperado al subir el archivo: {e}")
+
+    else:
+        error_string = " ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()])
+        messages.error(request, f"Error en el formulario. Detalles: {error_string}")
+
+    return redirect('prospecto-detail', pk=prospecto_pk)
+
+@login_required
+def delete_archivo(request, pk):
+    """
+    Elimina un archivo adjunto tanto de S3 (usando Boto3) como de la base de datos.
+    """
+    archivo = get_object_or_404(ArchivoAdjunto, pk=pk)
+    
+    if archivo.prospecto.asignado_a != request.user and not request.user.is_superuser:
+        messages.error(request, "No tienes permiso para eliminar este archivo.")
+        return redirect('prospecto-detail', pk=archivo.prospecto.pk)
+    
+    prospecto_pk = archivo.prospecto.pk
+    file_name = archivo.nombre
+    s3_key = archivo.archivo.name # Obtenemos la ruta del archivo en S3
 
     try:
-        # 3. Initialize the S3 client
-        # Corresponds to: $s3 = new S3Client([...]);
+        # Inicializar cliente de S3
         s3_client = boto3.client(
             's3',
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
             region_name=settings.AWS_S3_REGION_NAME
         )
-
-        # 4. Upload the file to the bucket
-        # Corresponds to: $s3->putObject([...]);
-        # We use upload_fileobj which is efficient for handling file-like objects from Django
-        s3_client.upload_fileobj(
-            archivo,  # The file object itself
-            settings.AWS_STORAGE_BUCKET_NAME,
-            s3_key    # The full path (Key) in the bucket
-        )
         
-        # 5. Generate the public URL of the uploaded file
-        bucket_name = settings.AWS_STORAGE_BUCKET_NAME
-        region = settings.AWS_S3_REGION_NAME
-        file_url = f"https://{bucket_name}.s3.{region}.amazonaws.com/{s3_key}"
+        # Eliminar el objeto de S3
+        s3_client.delete_object(
+            Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+            Key=s3_key
+        )
 
-        # 6. Return a success response
-        # Corresponds to: echo "<h3>Archivo subido correctamente ✅</h3>";
-        return HttpResponse(f"<h3>Archivo subido correctamente ✅</h3><p>URL del archivo: <a href='{file_url}' target='_blank'>{file_url}</a></p>")
+        # Si la eliminación en S3 fue exitosa, eliminamos el registro de la BD
+        archivo.delete()
+        
+        messages.success(request, f"El archivo '{file_name}' ha sido eliminado exitosamente.")
 
-    except NoCredentialsError:
-        return HttpResponse("<h3>Error al subir a S3 ❌</h3><p>Credentials not available.</p>", status=500)
-    except BotoCoreError as e:
-        # Corresponds to: catch (AwsException $e)
-        return HttpResponse(f"<h3>Error al subir a S3 ❌</h3><p>Mensaje: {e}</p>", status=500)
+    except (BotoCoreError, NoCredentialsError) as e:
+        messages.error(request, f"Error de configuración o conexión con S3 al intentar borrar: {e}")
     except Exception as e:
-        return HttpResponse(f"<h3>Ocurrió un error inesperado ❌</h3><p>Mensaje: {e}</p>", status=500)
+        messages.error(request, f"No se pudo eliminar el archivo del servidor: {e}")
 
-
-@login_required
-def delete_archivo(request, pk):
-    archivo = get_object_or_404(ArchivoAdjunto, pk=pk)
-    
-    if archivo.prospecto.asignado_a != request.user and not request.user.is_superuser:
-        return HttpResponseForbidden("No tienes permiso para eliminar este archivo.")
-    
-    prospecto_pk = archivo.prospecto.pk
-    file_name = archivo.nombre
-    
-    archivo.archivo.delete(save=False)
-    archivo.delete()
-    
-    messages.success(request, f"El archivo '{file_name}' ha sido eliminado exitosamente.")
     return redirect('prospecto-detail', pk=prospecto_pk)
