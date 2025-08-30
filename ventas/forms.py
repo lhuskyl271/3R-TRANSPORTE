@@ -92,8 +92,7 @@ class RecordatorioForm(forms.ModelForm):
 class ArchivoAdjuntoForm(forms.ModelForm):
     class Meta:
         model = ArchivoAdjunto
-        fields = ['nombre', 'archivo']
+        fields = ['archivo'] # <-- Solo pedimos el archivo
         widgets = {
-            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
             'archivo': forms.FileInput(attrs={'class': 'form-control'}),
         }
