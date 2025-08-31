@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Diagrama de Flujo - {{ proyecto.nombre_proyecto }}{% endblock %}
+
+{% block extra_js %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow/dist/drawflow.min.css">
+<script src="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow/dist/drawflow.min.js"></script>
+
+<style>
+    /* Estilos para el editor y sus componentes */
+    #drawflow {
+        width: 100%;
+        height: 75vh;
+        border: 2px solid #4a5568;
+        background: #fdfdfd;
+        background-image:
+            linear-gradient(rgba(0,0,0,.2) .1em, transparent .1em),
+            linear-gradient(90deg, rgba(0,0,0,.2) .1em, transparent .1em);
+        background-size: 1.5em 1.5em;
+        border-radius: 8px;
+    }
+    .drawflow-node {
+        border-radius: 8px !important;
+        background: white !important;
+        border: 1px solid #ddd !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+        min-width: 180px;
+    }
+    .drawflow-node .title-box {
+        background: #2c3e50 !important;
+        color: white !important;
+        padding: 10px !important;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+    }
+    .drawflow-node .box {
+        padding: 15px !important;
+    }
+    .drawflow-node textarea, .drawflow-node input {
+        width: 100%;
+        border-radius: 4px;
+        border: 1px solid #cbd5e0;
+        padding: 8px;
+    }
+    .col-left {
+        overflow: auto;
+        max-height: 80vh;
+        border-right: 1px solid #e2e8f0;
+    }
+    .drag-drawflow {
+        border: 2px dashed #4a5568;
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        cursor: grab;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">Diagrama de Flujo: {{ proyecto.nombre_proyecto }}</h2>
+            <p class="text-muted">Arrastra los nodos desde la izquierda para construir tu proceso.</p>
+        </div>
+        <div>
+            <a href="{% url 'proyecto-flujo-trabajo' proyecto.pk %}" class="btn btn-secondary me-2">
+                <i class="fas fa-columns me-2"></i>Ver Tablero Kanban
+            </a>
+            <button id="save-button" class="btn btn-success"><i class="fas fa-save me-2"></i>Guardar Diagrama</button>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-2 col-left">
+            <h5 class="mb-3">Nodos Disponibles</h5>
+            <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="inicio">
+                <i class="fas fa-flag-checkered me-2"></i> Inicio / Fin
+            </div>
+            <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="proceso">
+                <i class="fas fa-tasks me-2"></i> Tarea / Proceso
+            </div>
+            <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="decision">
+                <i class="fas fa-diamond me-2"></i> Decisión
+            </div>
+            <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="nota">
+                <i class="fas fa-sticky-note me-2"></i> Nota Adhesiva
+            </div>
+        </div>
+
+        <div class="col-md-10">
+            <div id="drawflow" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Configuración y lógica de Drawflow
+    const container = document.getElementById('drawflow');
+    const editor = new Drawflow(container);
+    editor.start();
+
+    // Cargar datos guardados
+    const diagramaData = JSON.parse('{{ diagrama_data_json|safe }}');
+    if (diagramaData && Object.keys(diagramaData).length > 0) {
+        editor.import(diagramaData);
+    }
+    
+    // Funciones para arrastrar y soltar
+    let mobile_item_selec = '';
+    function allowDrop(ev) { ev.preventDefault(); }
+    function drag(ev) { ev.dataTransfer.setData("node", ev.target.getAttribute('data-node')); }
+    function drop(ev) {
+        ev.preventDefault();
+        const nodeName = ev.dataTransfer.getData("node");
+        addNodeToDrawflow(nodeName, ev.clientX, ev.clientY);
+    }
+
+    // Función para añadir nodos al canvas
+    function addNodeToDrawflow(name, pos_x, pos_y) {
+        pos_x = pos_x * ( editor.precanvas.clientWidth / (editor.precanvas.clientWidth * editor.zoom)) - (editor.precanvas.getBoundingClientRect().x * ( editor.precanvas.clientWidth / (editor.precanvas.clientWidth * editor.zoom)));
+        pos_y = pos_y * ( editor.precanvas.clientHeight / (editor.precanvas.clientHeight * editor.zoom)) - (editor.precanvas.getBoundingClientRect().y * ( editor.precanvas.clientHeight / (editor.precanvas.clientHeight * editor.zoom)));
+        
+        let content = '';
+        let inputs = 1;
+        let outputs = 1;
+
+        switch (name) {
+            case 'inicio':
+                content = `<div><p>Punto de Inicio o Fin</p><input type="text" df-text placeholder="Ej: Recibir pedido"></div>`;
+                outputs = 1; inputs = 0;
+                break;
+            case 'proceso':
+                content = `<div><strong>Tarea:</strong><input type="text" df-title placeholder="Título de la tarea"><br><br><strong>Detalles:</strong><textarea df-details placeholder="Descripción del proceso..."></textarea></div>`;
+                break;
+            case 'decision':
+                content = `<div><p>Condición</p><input type="text" df-condition placeholder="Ej: ¿Aprobado?"></div>`;
+                outputs = 2; // Típicamente 'Sí' y 'No'
+                break;
+            case 'nota':
+                content = `<textarea df-note style="background-color: #fefcbf;" placeholder="Escribe tu nota aquí..."></textarea>`;
+                inputs = 0; outputs = 0; // Las notas no se conectan
+                break;
+        }
+
+        editor.addNode(name, inputs, outputs, pos_x, pos_y, name, {}, content);
+    }
+    
+    // Lógica para guardar el diagrama
+    document.getElementById('save-button').addEventListener('click', function() {
+        const dataToSave = editor.export();
+        
+        fetch("{% url 'api-guardar-diagrama' proyecto.pk %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                // Asegúrate de que tu 'base.html' o esta plantilla exponga el CSRF token
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(dataToSave)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('¡Diagrama guardado con éxito!');
+            } else {
+                alert('Error al guardar: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error en la petición:', error);
+            alert('Ocurrió un error de red al intentar guardar.');
+        });
+    });
+
+</script>
+{% endblock %}
