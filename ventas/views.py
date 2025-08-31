@@ -728,7 +728,7 @@ class ProyectoDetailView(LoginRequiredMixin, DetailView):
 
         return context
     
-    class ProyectoFlujoTrabajoView(LoginRequiredMixin, DetailView):
+class ProyectoFlujoTrabajoView(LoginRequiredMixin, DetailView):
     """
     Renderiza el tablero Kanban interactivo para un proyecto.
     """
