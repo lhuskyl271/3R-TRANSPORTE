@@ -241,6 +241,12 @@
             <a href="{% url 'prospecto-update' prospecto.pk %}" class="btn btn-warning">
                 <i class="fas fa-edit me-2"></i>Editar
             </a>
+            
+            {% if prospecto.estado == 'GANADO' and prospecto.proyecto %}
+            <a href="{% url 'proyecto-detail' prospecto.proyecto.pk %}" class="btn btn-success">
+                <i class="fas fa-tasks me-2"></i>Ir a Proyecto
+            </a>
+            {% endif %}
         </div>
     </div>
 
@@ -602,144 +608,6 @@
             </div>
         </div>
     </div>
-
-    {% if prospecto.estado == 'GANADO' and proyecto %}
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header bg-success text-white">
-                    <h4 class="mb-0"><i class="fas fa-tasks me-2"></i>Gestión de Proyecto: {{ proyecto.nombre_proyecto }}</h4>
-                </div>
-                <div class="card-body">
-                    <nav>
-                        <div class="nav nav-tabs" id="project-tab" role="tablist">
-                            <button class="nav-link active" id="planificacion-tab" data-bs-toggle="tab" data-bs-target="#planificacion" type="button" role="tab">
-                                <i class="fas fa-clipboard-list me-1"></i> Planificación
-                            </button>
-                            <button class="nav-link" id="equipo-tab" data-bs-toggle="tab" data-bs-target="#equipo" type="button" role="tab">
-                                <i class="fas fa-users-cog me-1"></i> Asignación de Equipo <span class="badge bg-secondary ms-1">{{ equipo_proyecto.count }}</span>
-                            </button>
-                            <button class="nav-link" id="entregables-tab" data-bs-toggle="tab" data-bs-target="#entregables" type="button" role="tab">
-                                <i class="fas fa-box-open me-1"></i> Entregables <span class="badge bg-secondary ms-1">{{ entregables.count }}</span>
-                            </button>
-                            <button class="nav-link" id="seguimiento-tab" data-bs-toggle="tab" data-bs-target="#seguimiento" type="button" role="tab">
-                                <i class="fas fa-chart-line me-1"></i> Seguimiento <span class="badge bg-secondary ms-1">{{ seguimientos.count }}</span>
-                            </button>
-                            <button class="nav-link" id="cierre-tab" data-bs-toggle="tab" data-bs-target="#cierre" type="button" role="tab">
-                                <i class="fas fa-flag-checkered me-1"></i> Cierre del Proyecto
-                            </button>
-                        </div>
-                    </nav>
-
-                    <div class="tab-content p-3 border border-top-0" id="project-tabContent">
-                        
-                        <div class="tab-pane fade show active" id="planificacion" role="tabpanel">
-                            <h5>Planificación y Detalles del Proyecto</h5>
-                            <form action="{% url 'update-proyecto' proyecto.pk %}" method="post">
-                                {% csrf_token %}
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Nombre del Proyecto</label>
-                                        {{ proyecto_form.nombre_proyecto }}
-                                    </div>
-                                    <div class="col-md-3 mb-3">
-                                        <label class="form-label">Fecha de Inicio</label>
-                                        {{ proyecto_form.fecha_inicio }}
-                                    </div>
-                                    <div class="col-md-3 mb-3">
-                                        <label class="form-label">Fecha Fin Estimada</label>
-                                        {{ proyecto_form.fecha_fin_estimada }}
-                                    </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Detalles de Planificación</label>
-                                    {{ proyecto_form.planificacion }}
-                                </div>
-                                <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>Guardar Planificación</button>
-                            </form>
-                        </div>
-
-                        <div class="tab-pane fade" id="equipo" role="tabpanel">
-                            <h5>Equipo Asignado al Proyecto</h5>
-                            <form action="{% url 'asignar-miembro-equipo' proyecto.pk %}" method="post" class="card card-body bg-light mb-3">
-                                {% csrf_token %}
-                                <div class="row align-items-end">
-                                    <div class="col-md-6">{{ asignar_miembro_form.trabajador }}</div>
-                                    <div class="col-md-4">{{ asignar_miembro_form.rol }}</div>
-                                    <div class="col-md-2 d-grid"><button type="submit" class="btn btn-success">Asignar</button></div>
-                                </div>
-                            </form>
-                            <ul class="list-group">
-                                {% for miembro in equipo_proyecto %}
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        {{ miembro.trabajador.nombre }}
-                                        <span class="badge bg-primary rounded-pill">{{ miembro.rol }}</span>
-                                    </li>
-                                {% empty %}
-                                    <li class="list-group-item text-muted">Aún no hay miembros en el equipo.</li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-
-                        <div class="tab-pane fade" id="entregables" role="tabpanel">
-                            <form action="{% url 'add-entregable' proyecto.pk %}" method="post" class="card card-body bg-light mb-3">
-                                {% csrf_token %}
-                                <div class="row align-items-end">
-                                    <div class="col-md-4"><label>Nombre</label>{{ entregable_form.nombre }}</div>
-                                    <div class="col-md-3"><label>Fecha Entrega</label>{{ entregable_form.fecha_entrega }}</div>
-                                    <div class="col-md-3"><label>Estado</label>{{ entregable_form.estado }}</div>
-                                    <div class="col-md-2 d-grid"><button type="submit" class="btn btn-success">Añadir</button></div>
-                                </div>
-                            </form>
-                            <ul class="list-group">
-                                {% for entregable in entregables %}
-                                    <li class="list-group-item">{{ entregable.nombre }} - <small>{{ entregable.fecha_entrega|date:"d M Y" }}</small> <span class="badge bg-info float-end">{{ entregable.get_estado_display }}</span></li>
-                                {% empty %}
-                                    <li class="list-group-item text-muted">No hay entregables definidos.</li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-
-                        <div class="tab-pane fade" id="seguimiento" role="tabpanel">
-                            <form action="{% url 'add-seguimiento-proyecto' proyecto.pk %}" method="post" class="mb-3">
-                                {% csrf_token %}
-                                {{ seguimiento_form.notas }}
-                                <button type="submit" class="btn btn-primary mt-2 w-100">Registrar Seguimiento</button>
-                             </form>
-                             {% for item in seguimientos %}
-                             <div class="alert alert-secondary">
-                                 <p class="mb-1">{{ item.notas|linebreaks }}</p>
-                                 <small class="text-muted">{{ item.fecha|date:"d M Y, H:i" }} por {{ item.creado_por.username }}</small>
-                             </div>
-                             {% empty %}
-                                <p class="text-muted">No hay seguimientos registrados para este proyecto.</p>
-                             {% endfor %}
-                        </div>
-
-                        <div class="tab-pane fade" id="cierre" role="tabpanel">
-                            <h5>Cierre y Resumen del Proyecto</h5>
-                            <form action="{% url 'update-proyecto' proyecto.pk %}" method="post">
-                                {% csrf_token %}
-                                {{ proyecto_form.nombre_proyecto.as_hidden }}
-                                {{ proyecto_form.fecha_inicio.as_hidden }}
-                                {{ proyecto_form.fecha_fin_estimada.as_hidden }}
-                                {{ proyecto_form.planificacion.as_hidden }}
-
-                                <div class="mb-3">
-                                    <label class="form-label">Notas de Cierre del Proyecto</label>
-                                    {{ proyecto_form.cierre_proyecto }}
-                                </div>
-                                <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>Guardar Cierre</button>
-                            </form>
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
 </div>
 
 <div class="modal fade" id="addContactModal" tabindex="-1" aria-labelledby="addContactModalLabel" aria-hidden="true">

@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Proyecto: {{ proyecto.nombre_proyecto }}{% endblock %}
+
+{% block content %}
+<style>
+    /* Estilos para mejorar la apariencia del dashboard del proyecto */
+    .project-header {
+        background: linear-gradient(135deg, #2ecc71 0%, #28b485 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: var(--border-radius);
+    }
+    .project-header h1 {
+        font-weight: 700;
+        margin: 0;
+    }
+    .kpi-card {
+        text-align: center;
+        padding: 1.5rem;
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: var(--border-radius);
+        color: white;
+        backdrop-filter: blur(10px);
+    }
+    .kpi-card .kpi-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+    .kpi-card .kpi-label {
+        font-size: 1rem;
+        opacity: 0.9;
+    }
+    .nav-pills .nav-link {
+        color: var(--dark-color);
+        font-weight: 500;
+    }
+    .nav-pills .nav-link.active {
+        background-color: var(--primary-color) !important;
+        color: white !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    .timeline-item {
+        border-left: 3px solid var(--secondary-color);
+        padding: 1rem 1.5rem;
+        margin-left: 1rem;
+        position: relative;
+    }
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -9px;
+        top: 1.2rem;
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        background-color: var(--secondary-color);
+    }
+</style>
+
+<div class="container-fluid">
+
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <div class="project-header mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap mb-4">
+            <div>
+                <h1 class="mb-1">{{ proyecto.nombre_proyecto }}</h1>
+                <p class="mb-0 fs-5">Cliente: <a href="{% url 'prospecto-detail' cliente.pk %}" class="text-white fw-bold text-decoration-none">{{ cliente.nombre_completo }}</a></p>
+            </div>
+            <a href="{% url 'cliente-cerrado-list' %}" class="btn btn-light mt-2 mt-md-0"><i class="fas fa-arrow-left me-2"></i>Volver a Clientes</a>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="kpi-card">
+                    <div class="kpi-number">{{ equipo_proyecto.count }}</div>
+                    <div class="kpi-label">Miembros del Equipo</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="kpi-card">
+                    <div class="kpi-number">{{ entregables.count }}</div>
+                    <div class="kpi-label">Entregables Totales</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="kpi-card">
+                    <div class="kpi-number">{{ proyecto.fecha_fin_estimada|date:"d M Y"|default:"N/A" }}</div>
+                    <div class="kpi-label">Fecha de Entrega</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Fases del Proyecto</h5>
+                    <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                        <button class="nav-link text-start active" data-bs-toggle="pill" data-bs-target="#planificacion">
+                            <i class="fas fa-clipboard-list fa-fw me-2"></i> Planificación
+                        </button>
+                        <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#equipo">
+                            <i class="fas fa-users-cog fa-fw me-2"></i> Equipo del Proyecto
+                        </button>
+                        <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#entregables">
+                            <i class="fas fa-box-open fa-fw me-2"></i> Entregables
+                        </button>
+                        <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#seguimiento">
+                            <i class="fas fa-chart-line fa-fw me-2"></i> Seguimiento
+                        </button>
+                        <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#cierre">
+                            <i class="fas fa-flag-checkered fa-fw me-2"></i> Cierre del Proyecto
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-body">
+                    <div class="tab-content" id="v-pills-tabContent">
+                        
+                        <div class="tab-pane fade show active" id="planificacion">
+                            <h4><i class="fas fa-clipboard-list me-2 text-primary"></i>Planificación y Alcance</h4>
+                            <hr>
+                            <form action="{% url 'update-proyecto' proyecto.pk %}" method="post">
+                                {% csrf_token %}
+                                <div class="row">
+                                    <div class="col-md-6 mb-3"><label class="form-label">Nombre del Proyecto</label>{{ proyecto_form.nombre_proyecto }}</div>
+                                    <div class="col-md-3 mb-3"><label class="form-label">Fecha Inicio</label>{{ proyecto_form.fecha_inicio }}</div>
+                                    <div class="col-md-3 mb-3"><label class="form-label">Fecha Fin Estimada</label>{{ proyecto_form.fecha_fin_estimada }}</div>
+                                </div>
+                                <div class="mb-3"><label class="form-label">Detalles de Planificación</label>{{ proyecto_form.planificacion }}</div>
+                                <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>Guardar Planificación</button>
+                            </form>
+                        </div>
+
+                        <div class="tab-pane fade" id="equipo">
+                            <h4><i class="fas fa-users-cog me-2 text-primary"></i>Equipo Asignado</h4>
+                            <hr>
+                            <form action="{% url 'asignar-miembro-equipo' proyecto.pk %}" method="post" class="card card-body bg-light mb-3">
+                                {% csrf_token %}
+                                <div class="row align-items-end g-2">
+                                    <div class="col-sm-5"><label>Trabajador</label>{{ asignar_miembro_form.trabajador }}</div>
+                                    <div class="col-sm-5"><label>Rol</label>{{ asignar_miembro_form.rol }}</div>
+                                    <div class="col-sm-2 d-grid"><button type="submit" class="btn btn-success">Asignar</button></div>
+                                </div>
+                            </form>
+                            <ul class="list-group">
+                                {% for miembro in equipo_proyecto %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">{{ miembro.trabajador.nombre }} <span class="badge bg-primary rounded-pill">{{ miembro.rol }}</span></li>
+                                {% empty %}
+                                    <li class="list-group-item text-muted">Aún no hay miembros asignados.</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+
+                        <div class="tab-pane fade" id="entregables">
+                             <h4><i class="fas fa-box-open me-2 text-primary"></i>Entregables del Proyecto</h4>
+                            <hr>
+                            <form action="{% url 'add-entregable' proyecto.pk %}" method="post" class="card card-body bg-light mb-3">
+                                {% csrf_token %}
+                                <div class="row align-items-end g-2">
+                                    <div class="col-md-4"><label>Nombre</label>{{ entregable_form.nombre }}</div>
+                                    <div class="col-md-3"><label>Fecha Límite</label>{{ entregable_form.fecha_entrega }}</div>
+                                    <div class="col-md-3"><label>Estado</label>{{ entregable_form.estado }}</div>
+                                    <div class="col-md-2 d-grid"><button type="submit" class="btn btn-success">Añadir</button></div>
+                                </div>
+                            </form>
+                            <ul class="list-group">
+                                {% for entregable in entregables %}
+                                <li class="list-group-item">
+                                    {{ entregable.nombre }} - <small>{{ entregable.fecha_entrega|date:"d M Y" }}</small>
+                                    <span class="badge float-end 
+                                        {% if entregable.estado == 'COMPLETADO' %}bg-success
+                                        {% elif entregable.estado == 'EN_PROGRESO' %}bg-warning text-dark
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ entregable.get_estado_display }}
+                                    </span>
+                                </li>
+                                {% empty %}
+                                <li class="list-group-item text-muted">No hay entregables definidos.</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+
+                        <div class="tab-pane fade" id="seguimiento">
+                            <h4><i class="fas fa-chart-line me-2 text-primary"></i>Bitácora de Seguimiento</h4>
+                            <hr>
+                            <form action="{% url 'add-seguimiento-proyecto' proyecto.pk %}" method="post" class="mb-4">
+                                {% csrf_token %}
+                                {{ seguimiento_form.notas }}
+                                <button type="submit" class="btn btn-primary mt-2 w-100">Registrar Avance</button>
+                            </form>
+                            {% for item in seguimientos %}
+                            <div class="timeline-item mb-3">
+                                <p class="mb-1">{{ item.notas|linebreaks }}</p>
+                                <small class="text-muted"><i class="fas fa-user me-1"></i>{{ item.creado_por.username }} - <i class="far fa-clock me-1"></i>{{ item.fecha|date:"d M Y, H:i" }}</small>
+                            </div>
+                            {% empty %}
+                            <p class="text-muted">No hay seguimientos registrados.</p>
+                            {% endfor %}
+                        </div>
+
+                        <div class="tab-pane fade" id="cierre">
+                            <h4><i class="fas fa-flag-checkered me-2 text-primary"></i>Cierre del Proyecto</h4>
+                            <hr>
+                            <form action="{% url 'update-proyecto' proyecto.pk %}" method="post">
+                                {% csrf_token %}
+                                {{ proyecto_form.nombre_proyecto.as_hidden }}
+                                {{ proyecto_form.fecha_inicio.as_hidden }}
+                                {{ proyecto_form.fecha_fin_estimada.as_hidden }}
+                                {{ proyecto_form.planificacion.as_hidden }}
+                                <div class="mb-3"><label class="form-label">Resumen y Resultados Finales</label>{{ proyecto_form.cierre_proyecto }}</div>
+                                <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>Guardar Cierre</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

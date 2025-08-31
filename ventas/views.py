@@ -699,5 +699,31 @@ def asignar_miembro_equipo(request, proyecto_pk):
             messages.error(request, "Error al asignar al miembro del equipo.")
     return redirect('prospecto-detail', pk=proyecto.prospecto.pk)
 
-# Nota: Faltarían vistas para editar y eliminar entregables, miembros, etc.
-# pero por simplicidad, esta es la base para añadir elementos.
+class ProyectoDetailView(LoginRequiredMixin, DetailView):
+    """
+    Vista detallada para la gestión de un proyecto específico.
+    Funciona como el dashboard principal del proyecto.
+    """
+    model = Proyecto
+    template_name = 'ventas/proyecto_detail.html'
+    context_object_name = 'proyecto'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        proyecto = self.get_object()
+
+        # Añadimos los formularios necesarios para las acciones dentro del panel
+        context['proyecto_form'] = ProyectoUpdateForm(instance=proyecto)
+        context['entregable_form'] = EntregableForm()
+        context['seguimiento_form'] = SeguimientoProyectoForm()
+        context['asignar_miembro_form'] = AsignarMiembroEquipoForm()
+
+        # Pasamos al contexto toda la información relacionada para mostrarla
+        context['equipo_proyecto'] = proyecto.equipoproyecto_set.all().select_related('trabajador')
+        context['entregables'] = proyecto.entregables.all()
+        context['seguimientos'] = proyecto.seguimientos.all().select_related('creado_por')
+        
+        # También pasamos el prospecto (cliente) para tener acceso a su información
+        context['cliente'] = proyecto.prospecto
+
+        return context

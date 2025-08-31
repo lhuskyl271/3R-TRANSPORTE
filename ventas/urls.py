@@ -3,7 +3,7 @@
 from django.urls import path
 from .views import (
     DashboardView,
-    ProspectoListView, 
+    ProspectoListView,
     ProspectoDetailView,
     ProspectoCreateView,
     ProspectoUpdateView,
@@ -32,6 +32,7 @@ from .views import (
     add_entregable,
     add_seguimiento_proyecto,
     asignar_miembro_equipo,
+    ProyectoDetailView, # <-- ✅ IMPORTAR LA NUEVA VISTA
 )
 
 urlpatterns = [
@@ -45,25 +46,27 @@ urlpatterns = [
     path('prospecto/<int:pk>/', ProspectoDetailView.as_view(), name='prospecto-detail'),
     path('prospecto/<int:pk>/editar/', ProspectoUpdateView.as_view(), name='prospecto-update'),
     path('prospecto/<int:pk>/eliminar/', ProspectoDeleteView.as_view(), name='prospecto-delete'),
-    
+
     # --- Acciones relacionadas a Prospectos ---
     path('prospecto/<int:prospecto_pk>/add-trabajador/', add_trabajador_a_prospecto, name='add-trabajador-a-prospecto'),
     path('prospecto/<int:prospecto_pk>/add-interaccion/', add_interaccion, name='add-interaccion'),
     path('prospecto/<int:prospecto_pk>/add-recordatorio/', add_recordatorio, name='add-recordatorio'),
     path('prospecto/<int:prospecto_pk>/add-archivo/', add_archivo, name='add-archivo'),
-    
-    # --- ✅ NUEVA RUTA PARA CLIENTES CERRADOS ---
+
+    # --- Clientes y Proyectos ---
     path('clientes/', ClienteCerradoListView.as_view(), name='cliente-cerrado-list'),
-    
+    # --- ✅ NUEVA RUTA PARA LA VISTA DE DETALLE DEL PROYECTO ---
+    path('proyecto/<int:pk>/', ProyectoDetailView.as_view(), name='proyecto-detail'),
+
     # --- Interacciones ---
     path('interaccion/<int:pk>/editar/', InteraccionUpdateView.as_view(), name='interaccion-update'),
     path('interaccion/<int:pk>/eliminar/', InteraccionDeleteView.as_view(), name='interaccion-delete'),
-    
+
     # --- Recordatorios ---
     path('recordatorio/<int:pk>/editar/', RecordatorioUpdateView.as_view(), name='recordatorio-update'),
     path('recordatorio/<int:pk>/eliminar/', RecordatorioDeleteView.as_view(), name='recordatorio-delete'),
     path('recordatorio/<int:pk>/toggle/', toggle_recordatorio, name='toggle-recordatorio'),
-    
+
     # --- Trabajadores ---
     path('trabajadores/', TrabajadorListView.as_view(), name='trabajador-list'),
     path('trabajador/nuevo/', TrabajadorCreateView.as_view(), name='trabajador-create'),
@@ -73,20 +76,15 @@ urlpatterns = [
     # --- Relación Prospecto-Trabajador ---
     path('prospecto-trabajador/<int:pk>/editar/', ProspectoTrabajadorUpdateView.as_view(), name='prospecto-trabajador-update'),
     path('prospecto-trabajador/<int:pk>/eliminar/', ProspectoTrabajadorDeleteView.as_view(), name='prospecto-trabajador-delete'),
-    
+
     # --- Archivos ---
     path('archivo/<int:pk>/eliminar/', delete_archivo, name='delete-archivo'),
     path('calendario/', CalendarioView.as_view(), name='calendario'),
     path('api/calendario-eventos/', calendario_eventos, name='calendario-eventos'),
-    
-    # --- ✅ URLs PARA GESTIÓN DE PROYECTOS ---
+
+    # --- URLs PARA GESTIÓN DE PROYECTOS ---
     path('proyecto/<int:pk>/update/', update_proyecto, name='update-proyecto'),
     path('proyecto/<int:proyecto_pk>/add-entregable/', add_entregable, name='add-entregable'),
     path('proyecto/<int:proyecto_pk>/add-seguimiento/', add_seguimiento_proyecto, name='add-seguimiento-proyecto'),
     path('proyecto/<int:proyecto_pk>/asignar-miembro/', asignar_miembro_equipo, name='asignar-miembro-equipo'),
-    
 ]
-
-
-    
-
