@@ -28,6 +28,7 @@ from datetime import timedelta
 import pytz 
 from django.core.paginator import Paginator
 from django.db.models import Subquery, OuterRef, Case, When, F, IntegerField
+from django.http import JsonResponse
 
 
 # ==============================================================================
@@ -528,3 +529,48 @@ def delete_archivo(request, pk):
         messages.error(request, f"No se pudo eliminar el archivo del servidor: {e}")
 
     return redirect('prospecto-detail', pk=prospecto_pk)
+
+class CalendarioView(LoginRequiredMixin, TemplateView):
+    """
+    Renderiza la página principal que contendrá el calendario.
+    """
+    template_name = 'ventas/calendario.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = "Calendario de Actividades"
+        return context
+
+@login_required
+def calendario_eventos(request):
+    """
+    Proporciona los eventos (recordatorios) en formato JSON para FullCalendar.
+    """
+    user = request.user
+    
+    # Filtrar recordatorios basados en el usuario (superuser ve todo)
+    if user.is_superuser:
+        recordatorios = Recordatorio.objects.all()
+    else:
+        recordatorios = Recordatorio.objects.filter(prospecto__asignado_a=user)
+        
+    eventos = []
+    for recordatorio in recordatorios:
+        # Asignar un color basado en el estado del recordatorio
+        color = '#2ecc71' if recordatorio.completado else '#e74c3c' # Verde si está completado, rojo si no
+
+        eventos.append({
+            'title': f"{recordatorio.titulo} ({recordatorio.prospecto.nombre_completo})",
+            'start': recordatorio.fecha_recordatorio.isoformat(),
+            'end': recordatorio.fecha_recordatorio.isoformat(),
+            'url': reverse('prospecto-detail', kwargs={'pk': recordatorio.prospecto.pk}),
+            'backgroundColor': color,
+            'borderColor': color,
+            'extendedProps': {
+                'description': f"Prospecto: {recordatorio.prospecto.nombre_completo}",
+                'status': 'Completado' if recordatorio.completado else 'Pendiente'
+            }
+        })
+        
+    return JsonResponse(eventos, safe=False)
+

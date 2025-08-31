@@ -196,6 +196,13 @@
                             <i class="fas fa-users"></i> <span class="nav-text">Prospectos</span>
                         </a>
                     </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'calendario' %}active{% endif %}" href="{% url 'calendario' %}">
+                            <i class="fas fa-calendar-alt"></i> <span class="nav-text">Calendario</span>
+                        </a>
+                    </li>
+
                     <li class="nav-item">
                         <a class="nav-link {% if 'trabajador' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'trabajador-list' %}">
                             <i class="fas fa-address-book"></i> <span class="nav-text">Vendedores</span>

@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<style>
+    /* Estilos para hacer el calendario más profesional y responsive */
+    #calendar-container {
+        padding: 1.5rem;
+        background-color: #ffffff;
+        border-radius: var(--border-radius);
+        box-shadow: var(--card-shadow);
+    }
+
+    #calendar {
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+
+    /* Personalización de FullCalendar */
+    .fc {
+        font-family: 'Roboto', sans-serif;
+    }
+    .fc .fc-toolbar-title {
+        font-size: 1.5rem;
+        font-weight: 500;
+        color: var(--primary-color);
+    }
+    .fc .fc-button-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+    .fc .fc-button-primary:hover {
+        background-color: var(--secondary-color);
+        border-color: var(--secondary-color);
+    }
+    .fc-daygrid-event {
+        cursor: pointer;
+        padding: 4px 6px;
+        font-weight: 500;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
+    .fc-daygrid-event:hover {
+        transform: scale(1.05);
+        opacity: 0.9;
+    }
+    .fc-event-main {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    /* Estilos para el tooltip de información del evento */
+    .event-tooltip {
+        position: absolute;
+        z-index: 10001;
+        background: rgba(44, 62, 80, 0.9);
+        color: white;
+        padding: 10px 15px;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        max-width: 300px;
+        pointer-events: none; /* Evita que el tooltip interfiera con el mouse */
+    }
+    .event-tooltip strong {
+        color: #3498db;
+    }
+
+    /* Adaptación para móviles */
+    @media (max-width: 768px) {
+        #calendar-container {
+            padding: 0.5rem;
+        }
+        .fc .fc-toolbar {
+            flex-direction: column;
+            align-items: center;
+        }
+        .fc .fc-toolbar-title {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+        .fc .fc-header-toolbar {
+             gap: 10px;
+        }
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header">
+            <h1 class="h4 mb-0"><i class="fas fa-calendar-alt me-2"></i>{{ page_title }}</h1>
+        </div>
+        <div id="calendar-container" class="card-body">
+            <div id='calendar'></div>
+        </div>
+    </div>
+</div>
+
+<div id="eventTooltip" class="event-tooltip" style="display: none;"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.14/index.global.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/@fullcalendar/core/locales/es.js'></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    var tooltipEl = document.getElementById('eventTooltip');
+
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        // --- CONFIGURACIÓN GENERAL ---
+        locale: 'es', // Establecer idioma en español
+        initialView: window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth', // Vista inicial adaptada a móviles
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+        },
+        height: 'auto', // Ajusta la altura automáticamente
+        navLinks: true, // Permite hacer clic en días/semanas para navegar
+        editable: false, // Los eventos no se pueden arrastrar
+        selectable: false,
+
+        // --- MANEJO DE EVENTOS ---
+        events: "{% url 'calendario-eventos' %}", // URL para obtener los datos de eventos
+
+        // --- INTERACCIÓN CON EVENTOS ---
+        eventClick: function(info) {
+            info.jsEvent.preventDefault(); // Evita que el navegador siga el enlace por defecto
+            if (info.event.url) {
+                window.location.href = info.event.url; // Redirige a la URL del evento (detalle del prospecto)
+            }
+        },
+
+        // --- TOOLTIP PROFESIONAL AL PASAR EL MOUSE ---
+        eventMouseEnter: function(info) {
+            const props = info.event.extendedProps;
+            tooltipEl.innerHTML = `
+                <strong>${info.event.title}</strong><br>
+                <hr class="my-1">
+                <strong>Estado:</strong> ${props.status}
+            `;
+            tooltipEl.style.display = 'block';
+            
+            // Posicionar el tooltip
+            const rect = info.el.getBoundingClientRect();
+            tooltipEl.style.left = (rect.left + window.scrollX) + 'px';
+            tooltipEl.style.top = (rect.bottom + window.scrollY + 5) + 'px';
+        },
+        eventMouseLeave: function(info) {
+            tooltipEl.style.display = 'none';
+        }
+    });
+
+    calendar.render();
+
+    // Reajustar la vista en cambio de tamaño de ventana para mejorar la responsividad
+    window.addEventListener('resize', function() {
+        if (window.innerWidth < 768) {
+            calendar.changeView('listWeek');
+        } else {
+            calendar.changeView('dayGridMonth');
+        }
+    });
+});
+</script>
+{% endblock %}
