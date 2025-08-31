@@ -4,30 +4,55 @@
 
 {% block content %}
 <style>
-    /* Variables de colores y estilos */
+    /* Variables de colores y estilos premium */
     :root {
         --primary-color: #2c3e50;
+        --primary-dark: #1a2530;
+        --primary-light: #3c546b;
         --secondary-color: #3498db;
+        --secondary-dark: #217dbb;
         --accent-color: #e74c3c;
-        --success-color: #2ecc71;
+        --success-color: #27ae60;
+        --success-light: #2ecc71;
         --warning-color: #f39c12;
+        --warning-light: #f1c40f;
         --danger-color: #e74c3c;
+        --danger-light: #e67e22;
         --light-color: #f8f9fa;
         --dark-color: #2c3e50;
         --text-color: #34495e;
-        --border-radius: 10px;
-        --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        --hover-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-        --transition: all 0.3s ease;
+        --text-light: #7f8c8d;
+        --border-radius: 12px;
+        --border-radius-sm: 8px;
+        --card-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        --hover-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        --gradient-primary: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        --gradient-success: linear-gradient(135deg, var(--success-color) 0%, #25a25a 100%);
+        --gradient-warning: linear-gradient(135deg, var(--warning-color) 0%, #e67e22 100%);
+        --gradient-danger: linear-gradient(135deg, var(--danger-color) 0%, #c0392b 100%);
     }
 
-    /* Estilos para hacer el calendario más grande y legible */
+    /* Estructura general mejorada */
     #calendar-container {
-        padding: 1.5rem;
+        padding: 2rem;
         background-color: #ffffff;
         border-radius: var(--border-radius);
         box-shadow: var(--card-shadow);
         margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    #calendar-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--gradient-primary);
+        border-radius: var(--border-radius) var(--border-radius) 0 0;
     }
 
     #calendar {
@@ -40,22 +65,39 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 1.5rem;
+        margin-bottom: 2rem;
         flex-wrap: wrap;
-        gap: 1rem;
+        gap: 1.5rem;
+        padding: 0 0.5rem;
     }
 
     .calendar-title {
-        font-size: 1.8rem;
-        font-weight: 700;
+        font-size: 2rem;
+        font-weight: 800;
         color: var(--dark-color);
         margin: 0;
+        position: relative;
+        display: inline-block;
     }
 
-    /* Personalización de FullCalendar */
+    .calendar-title::after {
+        content: '';
+        position: absolute;
+        bottom: -8px;
+        left: 0;
+        width: 50px;
+        height: 4px;
+        background: var(--gradient-primary);
+        border-radius: 2px;
+    }
+
+    /* Personalización premium de FullCalendar */
     .fc {
-        font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         font-size: 1.05rem;
+        --fc-border-color: #eaeaea;
+        --fc-page-bg-color: #fff;
+        --fc-small-font-size: 0.95rem;
     }
 
     .fc .fc-toolbar-title {
@@ -63,209 +105,275 @@
         font-weight: 700;
         color: var(--dark-color);
         text-transform: capitalize;
+        letter-spacing: -0.5px;
     }
 
     .fc .fc-button {
-        padding: 0.6rem 1.2rem;
+        padding: 0.7rem 1.4rem;
         font-size: 1rem;
-        border-radius: var(--border-radius);
+        border-radius: var(--border-radius-sm);
         transition: var(--transition);
-        font-weight: 500;
-        background-color: var(--primary-color);
-        border-color: var(--primary-color);
+        font-weight: 600;
+        background: var(--gradient-primary);
+        border: none;
         color: white;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
 
     .fc .fc-button:hover {
-        background-color: #1a2531;
-        border-color: #1a2531;
+        background: var(--primary-dark);
         transform: translateY(-2px);
         box-shadow: var(--hover-shadow);
     }
 
     .fc .fc-button-primary:not(:disabled).fc-button-active {
-        background-color: var(--secondary-color);
-        border-color: var(--secondary-color);
+        background: var(--secondary-color);
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
     }
 
+    .fc .fc-button:focus {
+        box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.3);
+    }
+
+    /* Mejoras en las celdas del calendario */
+    .fc .fc-daygrid-day-frame {
+        padding: 8px;
+        min-height: 120px;
+        transition: var(--transition);
+        border-radius: var(--border-radius-sm);
+    }
+
+    .fc .fc-daygrid-day:hover .fc-daygrid-day-frame {
+        background-color: rgba(52, 152, 219, 0.05);
+    }
+
+    .fc .fc-daygrid-day-number {
+        font-size: 1.1rem;
+        font-weight: 700;
+        padding: 8px;
+        color: var(--text-color);
+    }
+
+    .fc .fc-day-today .fc-daygrid-day-number {
+        background: var(--gradient-primary);
+        color: white;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+    }
+
+    .fc .fc-col-header-cell-cushion {
+        font-size: 1.1rem;
+        font-weight: 700;
+        padding: 12px 4px;
+        text-transform: capitalize;
+        color: var(--primary-color);
+    }
+
+    /* Eventos mejorados - más visibles */
     .fc-daygrid-event {
         cursor: pointer;
-        padding: 8px 10px;
-        font-weight: 500;
-        border-radius: 6px;
+        padding: 10px 12px;
+        font-weight: 600;
+        border-radius: var(--border-radius-sm);
         border: none;
         transition: var(--transition);
         font-size: 1rem;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+        margin-bottom: 6px;
+        border-left: 4px solid;
     }
 
     .fc-daygrid-event:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
     }
 
     .fc-event-main {
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
-        padding: 4px 6px;
+        padding: 4px 0;
         font-size: 1rem;
+        display: flex;
+        flex-direction: column;
     }
 
     .fc-event-time {
+        font-weight: 700;
+        margin-bottom: 4px;
+        font-size: 0.95rem;
+        opacity: 0.9;
+    }
+
+    .fc-event-title {
         font-weight: 600;
-        margin-right: 6px;
+        font-size: 1rem;
     }
 
     /* Estilos para eventos según estado */
     .event-completed {
-        background-color: var(--success-color);
-        border-color: var(--success-color);
+        background: var(--gradient-success);
+        border-left-color: var(--success-color) !important;
+        color: white;
     }
 
     .event-pending {
-        background-color: var(--warning-color);
-        border-color: var(--warning-color);
+        background: var(--gradient-warning);
+        border-left-color: var(--warning-color) !important;
+        color: white;
     }
 
     .event-urgent {
-        background-color: var(--danger-color);
-        border-color: var(--danger-color);
+        background: var(--gradient-danger);
+        border-left-color: var(--danger-color) !important;
+        color: white;
         animation: pulse 2s infinite;
     }
 
     @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.8; }
-        100% { opacity: 1; }
+        0% { transform: scale(1); box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1); }
+        50% { transform: scale(1.02); box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3); }
+        100% { transform: scale(1); box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1); }
     }
 
     /* Estilos para el tooltip de información del evento */
     .event-tooltip {
         position: absolute;
         z-index: 10001;
-        background: rgba(44, 62, 80, 0.95);
+        background: rgba(44, 62, 80, 0.98);
         color: white;
-        padding: 14px 18px;
-        border-radius: 8px;
+        padding: 16px 20px;
+        border-radius: var(--border-radius-sm);
         font-size: 1rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        max-width: 350px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        max-width: 320px;
         pointer-events: none;
         backdrop-filter: blur(4px);
         line-height: 1.6;
+        border-left: 4px solid var(--secondary-color);
     }
 
     .event-tooltip strong {
         color: var(--secondary-color);
         display: block;
-        margin-bottom: 6px;
+        margin-bottom: 8px;
         font-size: 1.1rem;
+        font-weight: 700;
     }
 
     .event-tooltip hr {
-        margin: 8px 0;
+        margin: 10px 0;
         opacity: 0.3;
+        border-color: rgba(255, 255, 255, 0.2);
     }
 
-    /* Botón flotante para acciones móviles */
+    .event-tooltip .event-desc {
+        font-size: 0.95rem;
+        opacity: 0.9;
+        margin-top: 8px;
+    }
+
+    /* Botón flotante premium */
     .floating-action-btn {
         position: fixed;
-        bottom: 25px;
-        right: 25px;
-        width: 60px;
-        height: 60px;
+        bottom: 30px;
+        right: 30px;
+        width: 65px;
+        height: 65px;
         border-radius: 50%;
-        background-color: var(--primary-color);
+        background: var(--gradient-primary);
         color: white;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
         z-index: 1000;
         transition: var(--transition);
-        font-size: 1.5rem;
+        font-size: 1.6rem;
+        border: none;
     }
 
     .floating-action-btn:hover {
-        transform: scale(1.1);
-        background-color: #1a2531;
+        transform: scale(1.1) rotate(90deg);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     }
 
-    /* Mejoras para las celdas del calendario */
-    .fc .fc-daygrid-day-frame {
-        padding: 6px;
-        min-height: 100px;
-    }
-
-    .fc .fc-daygrid-day-number {
-        font-size: 1.1rem;
-        font-weight: 600;
-        padding: 8px;
-    }
-
-    .fc .fc-col-header-cell-cushion {
-        font-size: 1.1rem;
-        font-weight: 600;
-        padding: 12px 4px;
-        text-transform: capitalize;
-    }
-
-    .fc .fc-daygrid-event {
-        margin-bottom: 4px;
-    }
-
-    /* Leyenda de colores */
+    /* Leyenda de colores premium */
     .color-legend {
         display: flex;
         flex-wrap: wrap;
-        gap: 15px;
-        margin-top: 20px;
-        padding: 15px;
-        background-color: #f8f9fa;
+        gap: 20px;
+        margin-top: 25px;
+        padding: 20px;
+        background-color: #f9fafb;
         border-radius: var(--border-radius);
+        border-left: 4px solid var(--primary-color);
     }
     
     .color-item {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
         font-size: 1rem;
+        font-weight: 500;
     }
     
     .color-box {
-        width: 20px;
-        height: 20px;
-        border-radius: 4px;
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
     
     .color-completed {
-        background-color: var(--success-color);
+        background: var(--gradient-success);
     }
     
     .color-pending {
-        background-color: var(--warning-color);
+        background: var(--gradient-warning);
     }
     
     .color-urgent {
-        background-color: var(--danger-color);
+        background: var(--gradient-danger);
     }
 
-    /* Adaptación para móviles */
+    /* Badge para indicar número de eventos en el día */
+    .day-event-badge {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        background: var(--gradient-primary);
+        color: white;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    /* Adaptación para móviles mejorada */
     @media (max-width: 768px) {
         #calendar-container {
-            padding: 0.8rem;
-            margin-bottom: 1rem;
+            padding: 1.2rem;
+            margin-bottom: 1.5rem;
         }
 
         .calendar-header {
             flex-direction: column;
             align-items: flex-start;
-            gap: 0.8rem;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
         }
 
         .calendar-title {
-            font-size: 1.6rem;
+            font-size: 1.8rem;
         }
 
         .fc .fc-toolbar {
@@ -275,17 +383,17 @@
         }
 
         .fc .fc-toolbar-title {
-            font-size: 1.5rem;
-            margin-bottom: 0.8rem;
+            font-size: 1.6rem;
+            margin-bottom: 1rem;
         }
 
         .fc .fc-toolbar-chunk {
-            margin-bottom: 0.8rem;
+            margin-bottom: 1rem;
         }
 
         .fc .fc-button {
-            padding: 0.5rem 1rem;
-            font-size: 0.9rem;
+            padding: 0.6rem 1.2rem;
+            font-size: 0.95rem;
         }
 
         .fc .fc-header-toolbar {
@@ -293,56 +401,78 @@
         }
 
         .fc .fc-view-harness {
-            min-height: 500px !important;
+            min-height: 550px !important;
+        }
+
+        .fc .fc-daygrid-day-frame {
+            min-height: 90px;
+            padding: 5px;
         }
 
         /* Mejora de la vista de lista para móviles */
         .fc-listEvent {
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            border-radius: var(--border-radius-sm);
+            margin-bottom: 12px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
             font-size: 1rem;
+            border-left: 4px solid var(--primary-light);
         }
 
         .fc-list-day-cushion {
-            padding: 10px 14px !important;
-            background-color: #f8f9fa !important;
+            padding: 12px 16px !important;
+            background: var(--gradient-primary) !important;
+            color: white !important;
             font-size: 1.1rem;
+            font-weight: 600;
         }
         
         .fc-event-time {
             display: block;
-            margin-bottom: 4px;
+            margin-bottom: 5px;
+            font-weight: 700;
         }
 
         .color-legend {
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
+            padding: 15px;
+        }
+        
+        .floating-action-btn {
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            font-size: 1.5rem;
         }
     }
 
     /* Vista muy pequeña (menos de 400px) */
     @media (max-width: 400px) {
         .fc .fc-toolbar {
-            gap: 6px;
+            gap: 8px;
         }
 
         .fc .fc-button {
-            padding: 0.4rem 0.8rem;
-            font-size: 0.85rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
         }
 
         .fc-toolbar-title {
-            font-size: 1.3rem !important;
+            font-size: 1.4rem !important;
         }
         
         .fc-event-main {
             font-size: 0.9rem;
         }
+        
+        .fc-event-time {
+            font-size: 0.85rem;
+        }
     }
 
-    /* Mejoras para el modo oscuro si está implementado */
+    /* Mejoras para el modo oscuro */
     @media (prefers-color-scheme: dark) {
         #calendar-container {
             background-color: #2c3e50;
@@ -355,30 +485,38 @@
 
         .fc-theme-standard td, 
         .fc-theme-standard th {
-            border-color: #34495e;
+            border-color: #3c546b;
         }
 
         .fc .fc-daygrid-day.fc-day-today {
-            background-color: rgba(52, 152, 219, 0.15);
+            background-color: rgba(52, 152, 219, 0.2);
+        }
+        
+        .fc .fc-daygrid-day-number {
+            color: #ecf0f1;
         }
 
         .color-legend {
             background-color: #34495e;
             color: #ecf0f1;
         }
+        
+        .fc .fc-daygrid-day:hover .fc-daygrid-day-frame {
+            background-color: rgba(52, 152, 219, 0.1);
+        }
     }
 </style>
 
 <div class="container-fluid">
-    <div class="card">
-        <div class="card-header">
+    <div class="card border-0 shadow-lg">
+        <div class="card-header bg-white border-0 pb-0">
             <div class="calendar-header">
-                <h1 class="calendar-title"><i class="fas fa-calendar-alt me-2"></i>{{ page_title }}</h1>
-                <div class="view-actions">
-                    <button class="btn btn-sm btn-outline-primary me-2" id="today-btn">Hoy</button>
+                <h1 class="calendar-title"><i class="fas fa-calendar-days me-2"></i>{{ page_title }}</h1>
+                <div class="view-actions d-flex align-items-center">
+                    <button class="btn btn-sm btn-primary me-2" id="today-btn">Hoy</button>
                     <div class="btn-group btn-group-sm" role="group">
-                        <button class="btn btn-outline-secondary" id="view-prev"><i class="fas fa-chevron-left"></i></button>
-                        <button class="btn btn-outline-secondary" id="view-next"><i class="fas fa-chevron-right"></i></button>
+                        <button class="btn btn-outline-primary" id="view-prev"><i class="fas fa-chevron-left"></i></button>
+                        <button class="btn btn-outline-primary" id="view-next"><i class="fas fa-chevron-right"></i></button>
                     </div>
                 </div>
             </div>
@@ -386,8 +524,8 @@
         <div id="calendar-container" class="card-body">
             <div id='calendar'></div>
             
-            <!-- Leyenda de colores -->
-            <div class="color-legend">
+            <!-- Leyenda de colores mejorada -->
+            <div class="color-legend mt-4">
                 <div class="color-item">
                     <div class="color-box color-completed"></div>
                     <span>Completado</span>
@@ -407,7 +545,7 @@
 
 <div id="eventTooltip" class="event-tooltip" style="display: none;"></div>
 
-<!-- Botón flotante para móviles -->
+<!-- Botón flotante premium para móviles -->
 <a href="{% url 'prospecto-create' %}" class="floating-action-btn d-md-none">
     <i class="fas fa-plus"></i>
 </a>
@@ -446,12 +584,16 @@ document.addEventListener('DOMContentLoaded', function() {
         navLinks: true, // Permite hacer clic en días/semanas para navegar
         editable: false, // Los eventos no se pueden arrastrar
         selectable: false,
-        dayMaxEventRows: true, // Limita la cantidad de eventos visibles por día
+        dayMaxEventRows: 4, // Limita la cantidad de eventos visibles por día
+        dayMaxEvents: 3, // Muestra el badge "+X más" cuando hay muchos eventos
         views: {
             listWeek: {
                 buttonText: 'Lista',
                 listDayFormat: { weekday: 'long', month: 'numeric', day: 'numeric', year: 'numeric' },
                 noEventsContent: 'No hay actividades programadas'
+            },
+            dayGridMonth: {
+                dayMaxEventRows: 3 // Ajuste específico para vista mensual
             }
         },
 
@@ -502,26 +644,40 @@ document.addEventListener('DOMContentLoaded', function() {
                 minute: '2-digit'
             });
             
-            tooltipEl.innerHTML = `
+            // Construir el contenido del tooltip
+            let tooltipContent = `
                 <strong>${info.event.title}</strong>
                 <hr>
                 <strong>Estado:</strong> ${props.status}<br>
                 <strong>Fecha:</strong> ${formattedDate}<br>
                 <strong>Hora:</strong> ${formattedTime}
             `;
+            
+            // Añadir descripción si existe
+            if (props.descripcion) {
+                tooltipContent += `<div class="event-desc"><strong>Notas:</strong> ${props.descripcion}</div>`;
+            }
+            
+            tooltipEl.innerHTML = tooltipContent;
             tooltipEl.style.display = 'block';
             
             // Posicionar el tooltip
             const rect = info.el.getBoundingClientRect();
             const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
             
             // Ajustar posición para no salir de la pantalla
             let leftPos = rect.left + window.scrollX;
             let topPos = rect.bottom + window.scrollY + 5;
             
             // Si el tooltip se sale por la derecha
-            if (leftPos + 300 > viewportWidth) {
-                leftPos = viewportWidth - 320;
+            if (leftPos + tooltipEl.offsetWidth > viewportWidth) {
+                leftPos = viewportWidth - tooltipEl.offsetWidth - 10;
+            }
+            
+            // Si el tooltip se sale por abajo
+            if (topPos + tooltipEl.offsetHeight > viewportHeight + window.scrollY) {
+                topPos = rect.top + window.scrollY - tooltipEl.offsetHeight - 5;
             }
             
             tooltipEl.style.left = leftPos + 'px';
@@ -534,11 +690,11 @@ document.addEventListener('DOMContentLoaded', function() {
             tooltipEl.style.display = 'none';
         },
         
-        // Mejorar el renderizado de eventos
+        // Mejorar el renderizado de eventos - más información visible
         eventContent: function(arg) {
             // Personalizar el contenido del evento
-            const titleEl = document.createElement('div');
-            titleEl.classList.add('fc-event-main');
+            const eventContainer = document.createElement('div');
+            eventContainer.classList.add('fc-event-main');
             
             // Obtener hora formateada
             const eventDate = new Date(arg.event.start);
@@ -547,13 +703,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 minute: '2-digit'
             });
             
-            titleEl.innerHTML = `
+            // Crear estructura del evento con nombre y hora claramente visibles
+            eventContainer.innerHTML = `
                 <span class="fc-event-time">${formattedTime}</span>
                 <span class="fc-event-title">${arg.event.title}</span>
             `;
             
-            const arrayOfDomNodes = [titleEl];
+            const arrayOfDomNodes = [eventContainer];
             return { domNodes: arrayOfDomNodes };
+        },
+        
+        // Personalizar el número de día para mostrar cantidad de eventos
+        dayCellContent: function(arg) {
+            const dayNumber = document.createElement('div');
+            dayNumber.classList.add('fc-daygrid-day-number');
+            dayNumber.innerHTML = arg.dayNumberText;
+            
+            // Obtener eventos para este día
+            const dayEvents = calendar.getEvents().filter(event => {
+                const eventStart = new Date(event.start);
+                return eventStart.toDateString() === arg.date.toDateString();
+            });
+            
+            // Añadir badge si hay eventos
+            if (dayEvents.length > 0) {
+                const badge = document.createElement('span');
+                badge.classList.add('day-event-badge');
+                badge.textContent = dayEvents.length;
+                dayNumber.appendChild(badge);
+            }
+            
+            return { domNodes: [dayNumber] };
         },
         
         // Mejorar la experiencia en móviles
@@ -570,6 +750,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Botones de navegación personalizados
     todayBtn.addEventListener('click', function() {
         calendar.today();
+        // Efecto visual de scroll suave
+        document.querySelector('.fc-day-today').scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+        });
     });
     
     viewPrevBtn.addEventListener('click', function() {
@@ -616,6 +801,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
+    
+    // Efecto de carga inicial
+    setTimeout(function() {
+        calendarEl.style.opacity = 1;
+        calendarEl.style.transition = 'opacity 0.5s ease';
+    }, 100);
 });
 </script>
 {% endblock %}
