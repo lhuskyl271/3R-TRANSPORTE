@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Flujo de Trabajo - {{ proyecto.nombre_proyecto }}{% endblock %}
+
+{% block extra_js %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jkanban@1.3.1/dist/jkanban.min.css">
+<script src="https://cdn.jsdelivr.net/npm/jkanban@1.3.1/dist/jkanban.min.js"></script>
+
+<style>
+    /* Estilos para un look más profesional */
+    body { background-color: #f0f2f5; }
+    .main-container { padding-top: 15px; }
+    #kanban-board { overflow-x: auto; padding-bottom: 20px; }
+    .kanban-board { background: transparent; }
+    .kanban-container { background: #f0f2f5; display: flex; }
+    .kanban-board header {
+        background-color: transparent;
+        font-size: 1rem;
+        font-weight: 600;
+        padding: 10px;
+        color: #5e6c84;
+    }
+    .kanban-board .kanban-drag {
+        background-color: #dfe1e6;
+        padding: 15px;
+        border-radius: 8px;
+    }
+    .kanban-item {
+        background: white;
+        padding: 10px;
+        margin-bottom: 8px;
+        border-radius: 5px;
+        box-shadow: 0 1px 2px rgba(9,30,66,.25);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .kanban-item:hover {
+        background-color: #f4f5f7;
+        box-shadow: 0 2px 4px rgba(9,30,66,.25);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-0">Flujo de Trabajo: {{ proyecto.nombre_proyecto }}</h2>
+            <p class="text-muted">Arrastra y suelta las tareas para organizarlas entre columnas.</p>
+        </div>
+        <div>
+            <a href="{% url 'proyecto-detail' proyecto.pk %}" class="btn btn-secondary me-2"><i class="fas fa-th-large me-2"></i>Volver al Panel</a>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addColumnModal"><i class="fas fa-plus me-2"></i>Añadir Columna</button>
+        </div>
+    </div>
+
+    <div id="kanban-board"></div>
+</div>
+
+<div class="modal fade" id="addColumnModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Crear Nueva Columna</h5></div>
+            <div class="modal-body">
+                <label for="newColumnTitle" class="form-label">Título de la Columna</label>
+                <input type="text" id="newColumnTitle" class="form-control">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="saveColumnBtn">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const kanbanData = {{ kanban_data_json|safe }};
+    const csrfToken = '{{ csrf_token }}';
+
+    const kanban = new jKanban({
+        element: "#kanban-board",
+        gutter: "15px",
+        widthBoard: "250px",
+        boards: kanbanData,
+        click: function(el) {
+            // Futura funcionalidad: abrir modal para ver/editar detalles de la tarea
+            console.log(`Tarea clickeada: ${el.dataset.eid}`);
+        },
+        dropEl: function(el, target, source, sibling) {
+            const tareaId = el.dataset.eid;
+            const nuevaColumnaId = target.parentElement.dataset.id;
+            
+            // Llamada a la API para notificar el movimiento
+            fetch("{% url 'api-mover-tarea' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrfToken,
+                },
+                body: JSON.stringify({
+                    tarea_id: tareaId,
+                    nueva_columna_id: nuevaColumnaId
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status !== 'success') {
+                    console.error('Error al mover la tarea.');
+                    // Aquí podrías revertir el movimiento en la UI si falla
+                }
+            });
+        },
+    });
+
+    // Añadir botón de "Nueva Tarea" a cada columna
+    const allColumns = kanban.element.querySelectorAll(".kanban-drag");
+    allColumns.forEach(column => {
+        const columnId = column.closest(".kanban-board").dataset.id;
+        const addTaskBtn = document.createElement("button");
+        addTaskBtn.innerHTML = '<i class="fas fa-plus me-1"></i> Añadir Tarea';
+        addTaskBtn.className = "btn btn-sm btn-secondary w-100 mt-2";
+        
+        addTaskBtn.addEventListener("click", function() {
+            const taskTitle = prompt("Introduce el título de la nueva tarea:");
+            if (taskTitle) {
+                // Llamada a la API para crear la tarea
+                fetch(`/api/columna/${columnId}/tarea/crear/`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+                    body: JSON.stringify({ titulo: taskTitle }),
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.status === 'success') {
+                        kanban.addElement(columnId, { id: data.id, title: data.titulo });
+                    }
+                });
+            }
+        });
+        column.appendChild(addTaskBtn);
+    });
+
+    // Lógica para guardar nueva columna
+    document.getElementById("saveColumnBtn").addEventListener("click", function() {
+        const title = document.getElementById("newColumnTitle").value;
+        if (!title) return;
+
+        fetch("{% url 'api-crear-columna' proyecto.pk %}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+            body: JSON.stringify({ titulo: title }),
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                kanban.addBoards([{ id: data.id, title: data.titulo, item: [] }]);
+                location.reload(); // Recargamos para que se añada el botón de "Añadir Tarea"
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

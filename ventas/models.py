@@ -323,4 +323,33 @@ class SeguimientoProyecto(models.Model):
 
     def __str__(self):
         return f"Seguimiento en {self.proyecto.nombre_proyecto} el {self.fecha.strftime('%d-%m-%Y')}"
+    
+class KanbanColumna(models.Model):
+    """Representa una columna en el tablero Kanban de un proyecto (Ej: 'Por Hacer', 'En Progreso')."""
+    proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='kanban_columnas')
+    titulo = models.CharField(max_length=100)
+    orden = models.PositiveIntegerField(default=0, help_text="Orden de la columna en el tablero.")
+
+    class Meta:
+        ordering = ['orden']
+        verbose_name = "Columna Kanban"
+        verbose_name_plural = "Columnas Kanban"
+
+    def __str__(self):
+        return f"{self.titulo} (Proyecto: {self.proyecto.id})"
+
+class KanbanTarea(models.Model):
+    """Representa una tarjeta o tarea dentro de una columna Kanban."""
+    columna = models.ForeignKey(KanbanColumna, on_delete=models.CASCADE, related_name='tareas')
+    titulo = models.CharField(max_length=255)
+    descripcion = models.TextField(blank=True)
+    orden = models.PositiveIntegerField(default=0, help_text="Orden de la tarea dentro de la columna.")
+
+    class Meta:
+        ordering = ['orden']
+        verbose_name = "Tarea Kanban"
+        verbose_name_plural = "Tareas Kanban"
+
+    def __str__(self):
+        return self.titulo
 

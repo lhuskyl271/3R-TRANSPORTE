@@ -14,7 +14,7 @@ from django.urls import reverse_lazy, reverse
 from .models import (
     Prospecto, Interaccion, Recordatorio, Etiqueta, Trabajador, 
     ProspectoTrabajador, ArchivoAdjunto, Proyecto, Entregable, 
-    EquipoProyecto, SeguimientoProyecto
+    EquipoProyecto, SeguimientoProyecto,KanbanColumna, KanbanTarea
 )
 from .forms import (
     ProspectoForm, InteraccionForm, RecordatorioForm, TrabajadorForm, 
@@ -727,3 +727,92 @@ class ProyectoDetailView(LoginRequiredMixin, DetailView):
         context['cliente'] = proyecto.prospecto
 
         return context
+    
+    class ProyectoFlujoTrabajoView(LoginRequiredMixin, DetailView):
+    """
+    Renderiza el tablero Kanban interactivo para un proyecto.
+    """
+    model = Proyecto
+    template_name = 'ventas/proyecto_flujo_trabajo.html'
+    context_object_name = 'proyecto'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        proyecto = self.get_object()
+
+        # Preparamos los datos para la librería jKanban en formato JSON
+        boards = []
+        columnas = proyecto.kanban_columnas.prefetch_related('tareas').all()
+        
+        for columna in columnas:
+            items = []
+            for tarea in columna.tareas.all():
+                items.append({
+                    'id': tarea.id,
+                    'title': tarea.titulo,
+                    'description': tarea.descripcion, # Pasamos la descripción
+                })
+            
+            boards.append({
+                'id': str(columna.id),
+                'title': columna.titulo,
+                'item': items
+            })
+        
+        context['kanban_data_json'] = json.dumps(boards)
+        return context
+
+# --- Vistas de API para manejar acciones del Kanban ---
+
+@login_required
+def crear_columna_api(request, proyecto_pk):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        titulo = data.get('titulo')
+        proyecto = get_object_or_404(Proyecto, pk=proyecto_pk)
+        
+        if titulo:
+            # Creamos la nueva columna con un orden al final
+            ultima_columna = proyecto.kanban_columnas.order_by('-orden').first()
+            nuevo_orden = (ultima_columna.orden + 1) if ultima_columna else 0
+            
+            columna = KanbanColumna.objects.create(proyecto=proyecto, titulo=titulo, orden=nuevo_orden)
+            return JsonResponse({'status': 'success', 'id': columna.id, 'titulo': columna.titulo})
+    return JsonResponse({'status': 'error'}, status=400)
+
+@login_required
+def crear_tarea_api(request, columna_pk):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        titulo = data.get('titulo')
+        columna = get_object_or_404(KanbanColumna, pk=columna_pk)
+        
+        if titulo:
+            # Creamos la nueva tarea con un orden al final de la columna
+            ultima_tarea = columna.tareas.order_by('-orden').first()
+            nuevo_orden = (ultima_tarea.orden + 1) if ultima_tarea else 0
+
+            tarea = KanbanTarea.objects.create(columna=columna, titulo=titulo, orden=nuevo_orden)
+            return JsonResponse({'status': 'success', 'id': tarea.id, 'titulo': tarea.titulo})
+    return JsonResponse({'status': 'error'}, status=400)
+
+@login_required
+def mover_tarea_api(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        tarea_id = data.get('tarea_id')
+        nueva_columna_id = data.get('nueva_columna_id')
+        
+        try:
+            tarea = KanbanTarea.objects.get(pk=tarea_id)
+            nueva_columna = KanbanColumna.objects.get(pk=nueva_columna_id)
+            
+            tarea.columna = nueva_columna
+            # Aquí podrías añadir lógica para reordenar las tareas
+            tarea.save()
+            
+            return JsonResponse({'status': 'success'})
+        except (KanbanTarea.DoesNotExist, KanbanColumna.DoesNotExist):
+            return JsonResponse({'status': 'error', 'message': 'Tarea o columna no encontrada'}, status=404)
+            
+    return JsonResponse({'status': 'error'}, status=400)

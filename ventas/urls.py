@@ -32,7 +32,11 @@ from .views import (
     add_entregable,
     add_seguimiento_proyecto,
     asignar_miembro_equipo,
-    ProyectoDetailView, # <-- ✅ IMPORTAR LA NUEVA VISTA
+    ProyectoDetailView,
+    ProyectoFlujoTrabajoView,
+    crear_columna_api,
+    crear_tarea_api,
+    mover_tarea_api,
 )
 
 urlpatterns = [
@@ -87,4 +91,11 @@ urlpatterns = [
     path('proyecto/<int:proyecto_pk>/add-entregable/', add_entregable, name='add-entregable'),
     path('proyecto/<int:proyecto_pk>/add-seguimiento/', add_seguimiento_proyecto, name='add-seguimiento-proyecto'),
     path('proyecto/<int:proyecto_pk>/asignar-miembro/', asignar_miembro_equipo, name='asignar-miembro-equipo'),
+    
+    # --- ✅ NUEVAS RUTAS PARA EL FLUJO DE TRABAJO (KANBAN) ---
+    path('proyecto/<int:pk>/flujo-trabajo/', ProyectoFlujoTrabajoView.as_view(), name='proyecto-flujo-trabajo'),
+    path('api/proyecto/<int:proyecto_pk>/columna/crear/', crear_columna_api, name='api-crear-columna'),
+    path('api/columna/<int:columna_pk>/tarea/crear/', crear_tarea_api, name='api-crear-tarea'),
+    path('api/tarea/mover/', mover_tarea_api, name='api-mover-tarea'),
+
 ]

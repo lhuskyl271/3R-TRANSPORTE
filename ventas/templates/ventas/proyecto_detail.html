@@ -75,7 +75,10 @@
                 <h1 class="mb-1">{{ proyecto.nombre_proyecto }}</h1>
                 <p class="mb-0 fs-5">Cliente: <a href="{% url 'prospecto-detail' cliente.pk %}" class="text-white fw-bold text-decoration-none">{{ cliente.nombre_completo }}</a></p>
             </div>
-            <a href="{% url 'cliente-cerrado-list' %}" class="btn btn-light mt-2 mt-md-0"><i class="fas fa-arrow-left me-2"></i>Volver a Clientes</a>
+            <div>
+                <a href="{% url 'cliente-cerrado-list' %}" class="btn btn-light mt-2 mt-md-0"><i class="fas fa-arrow-left me-2"></i>Volver a Clientes</a>
+                <a href="{% url 'proyecto-flujo-trabajo' proyecto.pk %}" class="btn btn-info mt-2 mt-md-0"><i class="fas fa-stream me-2"></i>Flujo de Trabajo</a>
+            </div>
         </div>
         <div class="row g-3">
             <div class="col-md-4">
