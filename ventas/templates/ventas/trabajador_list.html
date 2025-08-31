@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Lista de Trabajadores - CRM 3R Transporte{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="page-header">
+        <h1 class="mb-3 mb-md-0">Gestión de Vendedores</h1>
+        <a href="{% url 'trabajador-create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i> Nuevo Vendedor
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <!-- Vista de escritorio (table) -->
+            <div class="table-responsive desktop-table">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Puesto</th>
+                            <th>Email</th>
+                            <th>Teléfono</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for trabajador in trabajadores %}
+                        <tr>
+                            <td>{{ trabajador.nombre }}</td>
+                            <td>{{ trabajador.puesto|default:"-" }}</td>
+                            <td>{{ trabajador.email|default:"-" }}</td>
+                            <td>{{ trabajador.telefono|default:"-" }}</td>
+                            <td class="text-end">
+                                <a href="{% url 'trabajador-update' trabajador.pk %}" class="btn btn-sm btn-warning">Editar</a>
+                                <a href="{% url 'trabajador-delete' trabajador.pk %}" class="btn btn-sm btn-danger">Eliminar</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4">No hay trabajadores registrados.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Vista móvil (cards) -->
+            {% for trabajador in trabajadores %}
+            <div class="mobile-card">
+                <div class="field">
+                    <span class="field-label">Nombre:</span>
+                    <span>{{ trabajador.nombre }}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Puesto:</span>
+                    <span>{{ trabajador.puesto|default:"-" }}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Email:</span>
+                    <span>{{ trabajador.email|default:"-" }}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Teléfono:</span>
+                    <span>{{ trabajador.telefono|default:"-" }}</span>
+                </div>
+                <div class="actions">
+                    <a href="{% url 'trabajador-update' trabajador.pk %}" class="btn btn-sm btn-warning">Editar</a>
+                    <a href="{% url 'trabajador-delete' trabajador.pk %}" class="btn btn-sm btn-danger">Eliminar</a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="mobile-card text-center py-4">
+                No hay trabajadores registrados.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+    .page-header {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+    }
+    
+    @media (min-width: 768px) {
+        .page-header {
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+        }
+    }
+    
+    .card {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        overflow: hidden;
+    }
+    
+    .table-responsive {
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+    
+    .table thead th {
+        background-color: #f8f9fa;
+        border-top: none;
+        font-weight: 600;
+        padding: 1rem 0.5rem;
+        color: var(--text-color);
+    }
+    
+    .table tbody td {
+        padding: 0.75rem 0.5rem;
+        vertical-align: middle;
+    }
+    
+    .mobile-card {
+        display: none;
+        background: white;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .mobile-card .field {
+        margin-bottom: 0.5rem;
+        display: flex;
+    }
+    
+    .mobile-card .field-label {
+        font-weight: 600;
+        min-width: 80px;
+    }
+    
+    .mobile-card .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid #dee2e6;
+    }
+    
+    @media (max-width: 768px) {
+        .desktop-table {
+            display: none;
+        }
+        
+        .mobile-card {
+            display: block;
+        }
+        
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .page-header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+        
+        .mobile-card .actions {
+            flex-direction: column;
+        }
+        
+        .mobile-card .actions .btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
