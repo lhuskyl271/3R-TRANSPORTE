@@ -27,6 +27,7 @@ from .views import (
     delete_archivo,
     CalendarioView,
     calendario_eventos,
+    ClienteCerradoListView,
 )
 
 urlpatterns = [
@@ -46,6 +47,9 @@ urlpatterns = [
     path('prospecto/<int:prospecto_pk>/add-interaccion/', add_interaccion, name='add-interaccion'),
     path('prospecto/<int:prospecto_pk>/add-recordatorio/', add_recordatorio, name='add-recordatorio'),
     path('prospecto/<int:prospecto_pk>/add-archivo/', add_archivo, name='add-archivo'),
+    
+    # --- ✅ NUEVA RUTA PARA CLIENTES CERRADOS ---
+    path('clientes/', ClienteCerradoListView.as_view(), name='cliente-cerrado-list'),
     
     # --- Interacciones ---
     path('interaccion/<int:pk>/editar/', InteraccionUpdateView.as_view(), name='interaccion-update'),

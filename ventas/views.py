@@ -574,3 +574,36 @@ def calendario_eventos(request):
         
     return JsonResponse(eventos, safe=False)
 
+class ClienteCerradoListView(LoginRequiredMixin, ListView):
+    """
+    Vista para listar únicamente los prospectos que han sido marcados como 'GANADO'.
+    """
+    model = Prospecto
+    template_name = 'ventas/cliente_cerrado_list.html' # Usamos una nueva plantilla
+    context_object_name = 'clientes'
+    paginate_by = 10
+
+    def get_queryset(self):
+        # Filtramos para obtener solo prospectos con estado 'GANADO'
+        queryset = super().get_queryset().filter(estado=Prospecto.Estado.GANADO)
+        
+        # Si el usuario no es superusuario, filtramos por sus propios clientes
+        if not self.request.user.is_superuser:
+            queryset = queryset.filter(asignado_a=self.request.user)
+
+        # Mantenemos la funcionalidad de búsqueda
+        query = self.request.GET.get('q')
+        if query:
+            queryset = queryset.filter(
+                Q(nombre_completo__icontains=query) |
+                Q(email__icontains=query) |
+                Q(empresa__icontains=query)
+            )
+        
+        return queryset.order_by('-fecha_actualizacion')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Añadimos un título personalizado para la plantilla
+        context['page_title'] = 'Clientes Cerrados'
+        return context
