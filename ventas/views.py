@@ -206,18 +206,43 @@ class ProspectoDetailView(LoginRequiredMixin, OwnerRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        prospecto = self.get_object() # <-- Importante obtener el objeto prospecto
+
+        # --- Lógica estándar que ya tenías ---
         context['interaccion_form'] = InteraccionForm()
         context['recordatorio_form'] = RecordatorioForm()
         context['trabajador_form'] = ProspectoTrabajadorForm()
         context['archivo_form'] = ArchivoAdjuntoForm() 
-        context['archivos_adjuntos'] = self.object.archivos_adjuntos.all()
+        context['archivos_adjuntos'] = prospecto.archivos_adjuntos.all()
         
-        trabajadores_asociados_ids = self.object.trabajadores.values_list('id', flat=True)
+        trabajadores_asociados_ids = prospecto.trabajadores.values_list('id', flat=True)
         context['trabajador_form'].fields['trabajador'].queryset = Trabajador.objects.exclude(id__in=trabajadores_asociados_ids)
         
-        context['relaciones_trabajadores'] = self.object.prospectotrabajador_set.all().select_related('trabajador')
-        context['interacciones'] = self.object.interacciones.all().order_by('-fecha')
-        context['recordatorios'] = self.object.recordatorios.all().order_by('completado', 'fecha_recordatorio')
+        context['relaciones_trabajadores'] = prospecto.prospectotrabajador_set.all().select_related('trabajador')
+        context['interacciones'] = prospecto.interacciones.all().order_by('-fecha')
+        context['recordatorios'] = prospecto.recordatorios.all().order_by('completado', 'fecha_recordatorio')
+
+        # --- ✅ LÓGICA FALTANTE PARA GESTIÓN DE PROYECTO ---
+        # Si el prospecto es un cliente ganado, obtenemos o creamos su proyecto.
+        if prospecto.estado == Prospecto.Estado.GANADO:
+            proyecto, created = Proyecto.objects.get_or_create(prospecto=prospecto)
+            if created and not proyecto.nombre_proyecto:
+                # Si se acaba de crear, le damos un nombre por defecto
+                proyecto.nombre_proyecto = f"Proyecto para {prospecto.empresa or prospecto.nombre_completo}"
+                proyecto.save()
+
+            # Se añade el proyecto y los formularios al contexto
+            context['proyecto'] = proyecto
+            context['proyecto_form'] = ProyectoUpdateForm(instance=proyecto)
+            context['entregable_form'] = EntregableForm()
+            context['seguimiento_form'] = SeguimientoProyectoForm()
+            context['asignar_miembro_form'] = AsignarMiembroEquipoForm()
+            
+            # Se añaden los datos relacionados al proyecto
+            context['equipo_proyecto'] = proyecto.equipoproyecto_set.all().select_related('trabajador')
+            context['entregables'] = proyecto.entregables.all()
+            context['seguimientos'] = proyecto.seguimientos.all().select_related('creado_por')
+
         return context
     
 class ProspectoCreateView(LoginRequiredMixin, CreateView):
