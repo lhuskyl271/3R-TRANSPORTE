@@ -87,7 +87,7 @@
         left: 0;
         width: 50px;
         height: 4px;
-        background: var(--gradient-primary);
+        background: white;
         border-radius: 2px;
     }
 
@@ -511,7 +511,7 @@
     <div class="card border-0 shadow-lg">
         <div class="card-header bg-white border-0 pb-0">
             <div class="calendar-header">
-                <h1 class="calendar-title"><i class="fas fa-calendar-days me-2"></i>{{ page_title }}</h1>
+                <h1 class="calendar-title text-white"><i class="fas fa-calendar-days me-2"></i>Calendario de Actividades</h1>
                 <div class="view-actions d-flex align-items-center">
                     <button class="btn btn-sm btn-primary me-2" id="today-btn">Hoy</button>
                     <div class="btn-group btn-group-sm" role="group">
@@ -706,7 +706,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Crear estructura del evento con nombre y hora claramente visibles
             eventContainer.innerHTML = `
                 <span class="fc-event-time">${formattedTime}</span>
-                <span class="fc-event-title">${arg.event.title}</span>
             `;
             
             const arrayOfDomNodes = [eventContainer];
