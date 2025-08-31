@@ -11,10 +11,15 @@ from django.views.generic import (
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy, reverse
-from .models import Prospecto, Interaccion, Recordatorio, Etiqueta, Trabajador, ProspectoTrabajador, ArchivoAdjunto
+from .models import (
+    Prospecto, Interaccion, Recordatorio, Etiqueta, Trabajador, 
+    ProspectoTrabajador, ArchivoAdjunto, Proyecto, Entregable, 
+    EquipoProyecto, SeguimientoProyecto
+)
 from .forms import (
     ProspectoForm, InteraccionForm, RecordatorioForm, TrabajadorForm, 
-    ProspectoTrabajadorForm, ProspectoTrabajadorUpdateForm, ArchivoAdjuntoForm
+    ProspectoTrabajadorForm, ProspectoTrabajadorUpdateForm, ArchivoAdjuntoForm,
+    ProyectoUpdateForm, AsignarMiembroEquipoForm, EntregableForm, SeguimientoProyectoForm # <-- Nuevos
 )
 from django.db.models import Count, Q, Avg
 from django.http import HttpResponseForbidden, HttpResponse
@@ -607,3 +612,67 @@ class ClienteCerradoListView(LoginRequiredMixin, ListView):
         # Añadimos un título personalizado para la plantilla
         context['page_title'] = 'Clientes Cerrados'
         return context
+    
+@login_required
+def update_proyecto(request, pk):
+    proyecto = get_object_or_404(Proyecto, pk=pk)
+    # Aquí puedes añadir validación de permisos si es necesario
+    if request.method == 'POST':
+        form = ProyectoUpdateForm(request.POST, instance=proyecto)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Los detalles del proyecto han sido actualizados.")
+        else:
+            messages.error(request, "Hubo un error al actualizar el proyecto.")
+    return redirect('prospecto-detail', pk=proyecto.prospecto.pk)
+
+
+@login_required
+def add_entregable(request, proyecto_pk):
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_pk)
+    if request.method == 'POST':
+        form = EntregableForm(request.POST)
+        if form.is_valid():
+            entregable = form.save(commit=False)
+            entregable.proyecto = proyecto
+            entregable.save()
+            messages.success(request, "Entregable añadido correctamente.")
+        else:
+            messages.error(request, "Error al añadir el entregable.")
+    return redirect('prospecto-detail', pk=proyecto.prospecto.pk)
+
+@login_required
+def add_seguimiento_proyecto(request, proyecto_pk):
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_pk)
+    if request.method == 'POST':
+        form = SeguimientoProyectoForm(request.POST)
+        if form.is_valid():
+            seguimiento = form.save(commit=False)
+            seguimiento.proyecto = proyecto
+            seguimiento.creado_por = request.user
+            seguimiento.save()
+            messages.success(request, "Seguimiento del proyecto registrado.")
+        else:
+            messages.error(request, "Error al registrar el seguimiento.")
+    return redirect('prospecto-detail', pk=proyecto.prospecto.pk)
+
+@login_required
+def asignar_miembro_equipo(request, proyecto_pk):
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_pk)
+    if request.method == 'POST':
+        form = AsignarMiembroEquipoForm(request.POST)
+        if form.is_valid():
+            miembro = form.save(commit=False)
+            miembro.proyecto = proyecto
+            # Validar que no se añada dos veces
+            if EquipoProyecto.objects.filter(proyecto=proyecto, trabajador=miembro.trabajador).exists():
+                messages.warning(request, f"El trabajador '{miembro.trabajador}' ya forma parte del equipo.")
+            else:
+                miembro.save()
+                messages.success(request, f"'{miembro.trabajador}' ha sido añadido al equipo del proyecto.")
+        else:
+            messages.error(request, "Error al asignar al miembro del equipo.")
+    return redirect('prospecto-detail', pk=proyecto.prospecto.pk)
+
+# Nota: Faltarían vistas para editar y eliminar entregables, miembros, etc.
+# pero por simplicidad, esta es la base para añadir elementos.

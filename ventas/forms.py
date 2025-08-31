@@ -1,5 +1,8 @@
 from django import forms
-from .models import Prospecto, Interaccion, Recordatorio, Trabajador, ProspectoTrabajador, ArchivoAdjunto
+from .models import (
+    Prospecto, Interaccion, Recordatorio, Trabajador, ProspectoTrabajador, 
+    ArchivoAdjunto, Proyecto, Entregable, EquipoProyecto, SeguimientoProyecto
+)
 
 class ProspectoForm(forms.ModelForm):
     class Meta:
@@ -95,4 +98,48 @@ class ArchivoAdjuntoForm(forms.ModelForm):
         fields = ['archivo'] # <-- Solo pedimos el archivo
         widgets = {
             'archivo': forms.FileInput(attrs={'class': 'form-control'}),
+        }
+
+class ProyectoUpdateForm(forms.ModelForm):
+    """Formulario para editar los campos principales de un proyecto."""
+    class Meta:
+        model = Proyecto
+        fields = ['nombre_proyecto', 'fecha_inicio', 'fecha_fin_estimada', 'planificacion', 'cierre_proyecto']
+        widgets = {
+            'nombre_proyecto': forms.TextInput(attrs={'class': 'form-control'}),
+            'fecha_inicio': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'fecha_fin_estimada': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'planificacion': forms.Textarea(attrs={'class': 'form-control', 'rows': 5}),
+            'cierre_proyecto': forms.Textarea(attrs={'class': 'form-control', 'rows': 5}),
+        }
+
+class AsignarMiembroEquipoForm(forms.ModelForm):
+    """Formulario para añadir un trabajador al equipo del proyecto."""
+    class Meta:
+        model = EquipoProyecto
+        fields = ['trabajador', 'rol']
+        widgets = {
+            'trabajador': forms.Select(attrs={'class': 'form-select'}),
+            'rol': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Rol en el proyecto'}),
+        }
+
+class EntregableForm(forms.ModelForm):
+    """Formulario para crear o editar un entregable del proyecto."""
+    class Meta:
+        model = Entregable
+        fields = ['nombre', 'descripcion', 'fecha_entrega', 'estado']
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'fecha_entrega': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'estado': forms.Select(attrs={'class': 'form-select'}),
+        }
+        
+class SeguimientoProyectoForm(forms.ModelForm):
+    """Formulario para registrar una nota de seguimiento del proyecto."""
+    class Meta:
+        model = SeguimientoProyecto
+        fields = ['notas']
+        widgets = {
+            'notas': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Describe la actualización o seguimiento...'}),
         }

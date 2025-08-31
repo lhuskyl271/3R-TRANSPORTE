@@ -28,6 +28,10 @@ from .views import (
     CalendarioView,
     calendario_eventos,
     ClienteCerradoListView,
+    update_proyecto,
+    add_entregable,
+    add_seguimiento_proyecto,
+    asignar_miembro_equipo,
 )
 
 urlpatterns = [
@@ -72,9 +76,17 @@ urlpatterns = [
     
     # --- Archivos ---
     path('archivo/<int:pk>/eliminar/', delete_archivo, name='delete-archivo'),
-    
     path('calendario/', CalendarioView.as_view(), name='calendario'),
     path('api/calendario-eventos/', calendario_eventos, name='calendario-eventos'),
+    
+    # --- ✅ URLs PARA GESTIÓN DE PROYECTOS ---
+    path('proyecto/<int:pk>/update/', update_proyecto, name='update-proyecto'),
+    path('proyecto/<int:proyecto_pk>/add-entregable/', add_entregable, name='add-entregable'),
+    path('proyecto/<int:proyecto_pk>/add-seguimiento/', add_seguimiento_proyecto, name='add-seguimiento-proyecto'),
+    path('proyecto/<int:proyecto_pk>/asignar-miembro/', asignar_miembro_equipo, name='asignar-miembro-equipo'),
+    
 ]
+
+
     
 

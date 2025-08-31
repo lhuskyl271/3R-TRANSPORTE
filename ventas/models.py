@@ -241,3 +241,86 @@ class ArchivoAdjunto(models.Model):
     def __str__(self):
         return self.nombre
     
+class Proyecto(models.Model):
+    """
+    Representa el proyecto asociado a un prospecto que se convirtió en cliente.
+    """
+    prospecto = models.OneToOneField(
+        Prospecto, 
+        on_delete=models.CASCADE, 
+        related_name='proyecto',
+        # Asegura que solo se puedan crear proyectos para clientes ganados
+        limit_choices_to={'estado': Prospecto.Estado.GANADO}
+    )
+    nombre_proyecto = models.CharField(max_length=200, blank=True)
+    fecha_inicio = models.DateField(null=True, blank=True)
+    fecha_fin_estimada = models.DateField(null=True, blank=True)
+    
+    # --- FASES DEL PROYECTO ---
+    planificacion = models.TextField(
+        blank=True, 
+        verbose_name="Planificación",
+        help_text="Detalles, alcance y objetivos iniciales del proyecto."
+    )
+    cierre_proyecto = models.TextField(
+        blank=True,
+        verbose_name="Cierre del Proyecto",
+        help_text="Resumen, resultados finales y lecciones aprendidas."
+    )
+    
+    equipo = models.ManyToManyField(
+        Trabajador,
+        through='EquipoProyecto',
+        related_name="proyectos_asignados"
+    )
+
+    def __str__(self):
+        return f"Proyecto: {self.nombre_proyecto or self.prospecto.nombre_completo}"
+
+    def get_absolute_url(self):
+        return self.prospecto.get_absolute_url()
+
+class EquipoProyecto(models.Model):
+    """Tabla intermedia para asignar trabajadores a un proyecto con un rol específico."""
+    proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE)
+    trabajador = models.ForeignKey(Trabajador, on_delete=models.CASCADE)
+    rol = models.CharField(max_length=100, help_text="Ej: Líder de Proyecto, Desarrollador, etc.")
+
+    class Meta:
+        unique_together = ('proyecto', 'trabajador')
+
+    def __str__(self):
+        return f"{self.trabajador.nombre} como {self.rol} en {self.proyecto.nombre_proyecto}"
+
+class Entregable(models.Model):
+    """Define los entregables o hitos de un proyecto."""
+    class Estado(models.TextChoices):
+        PENDIENTE = 'PENDIENTE', 'Pendiente'
+        EN_PROGRESO = 'EN_PROGRESO', 'En Progreso'
+        COMPLETADO = 'COMPLETADO', 'Completado'
+
+    proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='entregables')
+    nombre = models.CharField(max_length=200)
+    descripcion = models.TextField(blank=True)
+    fecha_entrega = models.DateField()
+    estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.PENDIENTE)
+
+    class Meta:
+        ordering = ['fecha_entrega']
+
+    def __str__(self):
+        return self.nombre
+
+class SeguimientoProyecto(models.Model):
+    """Registra actualizaciones y seguimientos específicos del proyecto."""
+    proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='seguimientos')
+    fecha = models.DateTimeField(default=timezone.now)
+    notas = models.TextField()
+    creado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='seguimientos_proyecto')
+
+    class Meta:
+        ordering = ['-fecha']
+
+    def __str__(self):
+        return f"Seguimiento en {self.proyecto.nombre_proyecto} el {self.fecha.strftime('%d-%m-%Y')}"
+
