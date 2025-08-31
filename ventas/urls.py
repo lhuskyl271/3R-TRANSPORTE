@@ -69,7 +69,8 @@ urlpatterns = [
     # --- Archivos ---
     path('archivo/<int:pk>/eliminar/', delete_archivo, name='delete-archivo'),
     
-    path('calendario/', views.CalendarioView.as_view(), name='calendario'),
-    path('api/calendario-eventos/', views.calendario_eventos, name='calendario-eventos'),
-    
+    path('calendario/', CalendarioView.as_view(), name='calendario'),
+    path('api/calendario-eventos/', calendario_eventos, name='calendario-eventos'),
 ]
+    
+
