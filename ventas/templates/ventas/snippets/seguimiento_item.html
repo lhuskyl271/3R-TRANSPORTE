@@ -1,0 +1,17 @@
+{% comment %} Contenido para un <div> de la lista de seguimiento {% endcomment %}
+<div class="timeline-item mb-3" data-id="{{ item.pk }}">
+    <div class="d-flex justify-content-between">
+        <p class="mb-1">{{ item.notas|linebreaks }}</p>
+        {% if item.creado_por == request.user or request.user.is_superuser %}
+        <div class="ms-3">
+            <button type="button" class="btn btn-sm btn-outline-primary py-0 px-1 action-btn" data-url="{% url 'seguimiento-update' item.pk %}" title="Editar nota">
+                <i class="fas fa-pencil-alt small"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 action-btn" data-url="{% url 'seguimiento-delete' item.pk %}" title="Eliminar nota">
+                <i class="fas fa-trash-alt small"></i>
+            </button>
+        </div>
+        {% endif %}
+    </div>
+    <small class="text-muted"><i class="fas fa-user me-1"></i>{{ item.creado_por.username }} - <i class="far fa-clock me-1"></i>{{ item.fecha|date:"d M Y, H:i" }}</small>
+</div>

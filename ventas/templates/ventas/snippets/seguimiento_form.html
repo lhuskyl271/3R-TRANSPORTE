@@ -1,0 +1,14 @@
+<form action="{% url 'seguimiento-update' form.instance.pk %}" method="post">
+    {% csrf_token %}
+    <div class="modal-header">
+        <h5 class="modal-title">Editar Nota de Seguimiento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    <div class="modal-body">
+        {{ form.notas }}
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+    </div>
+</form>

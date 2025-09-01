@@ -1,0 +1,16 @@
+<form action="{% url 'seguimiento-delete' object.pk %}" method="post">
+    {% csrf_token %}
+    <div class="modal-header">
+        <h5 class="modal-title">Confirmar Eliminación</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    <div class="modal-body">
+        <p>¿Estás seguro de que quieres eliminar esta nota de seguimiento?</p>
+        <blockquote class="blockquote-footer mt-2">{{ object.notas|truncatewords:20 }}</blockquote>
+        <p class="text-danger mt-3">Esta acción no se puede deshacer.</p>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+    </div>
+</form>

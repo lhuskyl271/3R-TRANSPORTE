@@ -59,7 +59,8 @@
 </style>
 
 <div class="container-fluid">
-
+    
+    <div id="alert-container">
     {% if messages %}
       {% for message in messages %}
         <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -68,6 +69,7 @@
         </div>
       {% endfor %}
     {% endif %}
+    </div>
 
     <div class="project-header mb-4">
         <div class="d-flex justify-content-between align-items-center flex-wrap mb-4">
@@ -83,13 +85,13 @@
         <div class="row g-3">
             <div class="col-md-4">
                 <div class="kpi-card">
-                    <div class="kpi-number">{{ equipo_proyecto.count }}</div>
+                    <div id="team-member-count" class="kpi-number">{{ equipo_proyecto.count }}</div>
                     <div class="kpi-label">Miembros del Equipo</div>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="kpi-card">
-                    <div class="kpi-number">{{ entregables.count }}</div>
+                    <div id="deliverable-count" class="kpi-number">{{ entregables.count }}</div>
                     <div class="kpi-label">Entregables Totales</div>
                 </div>
             </div>
@@ -154,7 +156,7 @@
                         <div class="tab-pane fade" id="equipo">
                             <h4><i class="fas fa-users-cog me-2 text-primary"></i>Equipo Asignado</h4>
                             <hr>
-                            <form action="{% url 'asignar-miembro-equipo' proyecto.pk %}" method="post" class="card card-body bg-light mb-3">
+                            <form id="add-miembro-form" action="{% url 'asignar-miembro-equipo' proyecto.pk %}" method="post" class="card card-body bg-light mb-3">
                                 {% csrf_token %}
                                 <div class="row align-items-end g-2">
                                     <div class="col-sm-5"><label>Trabajador</label>{{ asignar_miembro_form.trabajador }}</div>
@@ -162,21 +164,21 @@
                                     <div class="col-sm-2 d-grid"><button type="submit" class="btn btn-success">Asignar</button></div>
                                 </div>
                             </form>
-                            <ul class="list-group">
+                            <ul id="miembros-list" class="list-group">
                                 {% for miembro in equipo_proyecto %}
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center" data-id="{{ miembro.pk }}">
                                         <div>
                                             {{ miembro.trabajador.nombre }} 
                                             <span class="badge bg-primary rounded-pill">{{ miembro.rol }}</span>
                                         </div>
                                         <div>
-                                            <a href="{% url 'desasignar-miembro' miembro.pk %}" class="btn btn-sm btn-outline-danger" title="Desasignar miembro">
+                                            <button type="button" class="btn btn-sm btn-outline-danger action-btn" data-url="{% url 'desasignar-miembro' miembro.pk %}" title="Desasignar miembro">
                                                 <i class="fas fa-trash-alt"></i>
-                                            </a>
+                                            </button>
                                         </div>
                                     </li>
                                 {% empty %}
-                                    <li class="list-group-item text-muted">Aún no hay miembros asignados.</li>
+                                    <li class="list-group-item text-muted empty-message">Aún no hay miembros asignados.</li>
                                 {% endfor %}
                             </ul>
                         </div>
@@ -184,7 +186,7 @@
                         <div class="tab-pane fade" id="entregables">
                              <h4><i class="fas fa-box-open me-2 text-primary"></i>Entregables del Proyecto</h4>
                             <hr>
-                            <form action="{% url 'add-entregable' proyecto.pk %}" method="post" class="card card-body bg-light mb-3">
+                            <form id="add-entregable-form" action="{% url 'add-entregable' proyecto.pk %}" method="post" class="card card-body bg-light mb-3">
                                 {% csrf_token %}
                                 <div class="row align-items-end g-2">
                                     <div class="col-md-4"><label>Nombre</label>{{ entregable_form.nombre }}</div>
@@ -193,9 +195,9 @@
                                     <div class="col-md-2 d-grid"><button type="submit" class="btn btn-success">Añadir</button></div>
                                 </div>
                             </form>
-                            <ul class="list-group">
+                            <ul id="entregables-list" class="list-group">
                                 {% for entregable in entregables %}
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <li class="list-group-item d-flex justify-content-between align-items-center" data-id="{{ entregable.pk }}">
                                     <div>
                                         {{ entregable.nombre }} - <small>{{ entregable.fecha_entrega|date:"d M Y" }}</small>
                                         <span class="badge float-end 
@@ -206,16 +208,16 @@
                                         </span>
                                     </div>
                                     <div>
-                                        <a href="{% url 'entregable-update' entregable.pk %}" class="btn btn-sm btn-outline-primary" title="Editar entregable">
+                                        <button type="button" class="btn btn-sm btn-outline-primary action-btn" data-url="{% url 'entregable-update' entregable.pk %}" title="Editar entregable">
                                             <i class="fas fa-pencil-alt"></i>
-                                        </a>
-                                        <a href="{% url 'entregable-delete' entregable.pk %}" class="btn btn-sm btn-outline-danger" title="Eliminar entregable">
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger action-btn" data-url="{% url 'entregable-delete' entregable.pk %}" title="Eliminar entregable">
                                             <i class="fas fa-trash-alt"></i>
-                                        </a>
+                                        </button>
                                     </div>
                                 </li>
                                 {% empty %}
-                                <li class="list-group-item text-muted">No hay entregables definidos.</li>
+                                <li class="list-group-item text-muted empty-message">No hay entregables definidos.</li>
                                 {% endfor %}
                             </ul>
                         </div>
@@ -224,13 +226,11 @@
                             <h4><i class="fas fa-project-diagram me-2 text-primary"></i>Herramienta de Diagramas</h4>
                             <p class="text-muted">Crea y gestiona diagramas de flujo de forma gráfica.</p>
                             <hr>
-
                             <div class="mb-4">
                                 <a href="{% url 'diagrama-crear' proyecto.pk %}" class="btn btn-success">
                                     <i class="fas fa-plus me-2"></i>Crear Nuevo Diagrama Gráfico
                                 </a>
                             </div>
-
                             <h5>Diagramas Guardados</h5>
                             <div id="diagrams-list">
                                 {% for diagrama in proyecto.diagramas.all %}
@@ -263,31 +263,33 @@
                         <div class="tab-pane fade" id="seguimiento">
                             <h4><i class="fas fa-chart-line me-2 text-primary"></i>Bitácora de Seguimiento</h4>
                             <hr>
-                            <form action="{% url 'add-seguimiento-proyecto' proyecto.pk %}" method="post" class="mb-4">
+                            <form id="add-seguimiento-form" action="{% url 'add-seguimiento-proyecto' proyecto.pk %}" method="post" class="mb-4">
                                 {% csrf_token %}
                                 {{ seguimiento_form.notas }}
                                 <button type="submit" class="btn btn-primary mt-2 w-100">Registrar Avance</button>
                             </form>
+                            <div id="seguimiento-list">
                             {% for item in seguimientos %}
-                            <div class="timeline-item mb-3">
+                            <div class="timeline-item mb-3" data-id="{{ item.pk }}">
                                 <div class="d-flex justify-content-between">
                                     <p class="mb-1">{{ item.notas|linebreaks }}</p>
                                     {% if item.creado_por == request.user or request.user.is_superuser %}
                                     <div class="ms-3">
-                                        <a href="{% url 'seguimiento-update' item.pk %}" class="btn btn-sm btn-outline-primary py-0 px-1" title="Editar nota">
+                                        <button type="button" class="btn btn-sm btn-outline-primary py-0 px-1 action-btn" data-url="{% url 'seguimiento-update' item.pk %}" title="Editar nota">
                                             <i class="fas fa-pencil-alt small"></i>
-                                        </a>
-                                        <a href="{% url 'seguimiento-delete' item.pk %}" class="btn btn-sm btn-outline-danger py-0 px-1" title="Eliminar nota">
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 action-btn" data-url="{% url 'seguimiento-delete' item.pk %}" title="Eliminar nota">
                                             <i class="fas fa-trash-alt small"></i>
-                                        </a>
+                                        </button>
                                     </div>
                                     {% endif %}
                                 </div>
                                 <small class="text-muted"><i class="fas fa-user me-1"></i>{{ item.creado_por.username }} - <i class="far fa-clock me-1"></i>{{ item.fecha|date:"d M Y, H:i" }}</small>
                             </div>
                             {% empty %}
-                            <p class="text-muted">No hay seguimientos registrados.</p>
+                            <p class="text-muted empty-message">No hay seguimientos registrados.</p>
                             {% endfor %}
+                            </div>
                         </div>
 
                         <div class="tab-pane fade" id="cierre">
@@ -310,48 +312,151 @@
     </div>
 </div>
 
+<div class="modal fade" id="actionModal" tabindex="-1" aria-labelledby="actionModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div id="modal-content-wrapper">
+        </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const saveBtn = document.getElementById('save-diagram-btn');
-    if (saveBtn) {
-        saveBtn.addEventListener('click', function() {
-            const titulo = document.getElementById('new-diagram-title').value;
-            const codigo = document.getElementById('new-diagram-code').value;
-            const csrfToken = '{{ csrf_token }}';
-            const url = "{% url 'api-guardar-diagrama' proyecto.pk %}";
+    const actionModal = new bootstrap.Modal(document.getElementById('actionModal'));
+    const modalContentWrapper = document.getElementById('modal-content-wrapper');
+    const csrfToken = '{{ csrf_token }}';
 
-            if (!titulo.trim() || !codigo.trim()) {
-                alert('El título y el código del diagrama no pueden estar vacíos.');
-                return;
-            }
+    // Función para mostrar alertas dinámicas
+    function showAlert(message, type = 'success') {
+        const alertContainer = document.getElementById('alert-container');
+        // Elimina alertas viejas para no acumularlas
+        const oldAlert = alertContainer.querySelector('.alert');
+        if(oldAlert) oldAlert.remove();
 
-            fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken
-                },
-                body: JSON.stringify({
-                    id: null,
-                    titulo: titulo,
-                    codigo: codigo
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    alert('¡Diagrama guardado con éxito! La página se recargará.');
-                    location.reload();
-                } else {
-                    alert('Hubo un error al guardar el diagrama.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Ocurrió un error de red. Revisa la consola para más detalles.');
-            });
-        });
+        const alert = `
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+        alertContainer.innerHTML = alert + alertContainer.innerHTML;
     }
+
+    // Función para manejar el envío de formularios (Crear, Editar, Eliminar)
+    async function handleFormSubmit(form, url, method, isModalForm = false) {
+        try {
+            const formData = new FormData(form);
+            const response = await fetch(url, {
+                method: method,
+                body: formData,
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showAlert(data.message);
+                if (data.html) {
+                    const list = document.getElementById(data.list_id);
+                    if (list) {
+                        const emptyMessage = list.querySelector('.empty-message');
+                        if (emptyMessage) emptyMessage.remove();
+
+                        if (data.action === 'create') {
+                            list.insertAdjacentHTML('beforeend', data.html);
+                        } else if (data.action === 'update') {
+                            const oldItem = list.querySelector(`[data-id="${data.id}"]`);
+                            if (oldItem) oldItem.outerHTML = data.html;
+                        }
+                    }
+                } else if (data.action === 'delete') {
+                    const list = document.getElementById(data.list_id);
+                    const itemToRemove = list.querySelector(`[data-id="${data.id}"]`);
+                    if (itemToRemove) itemToRemove.remove();
+                }
+
+                // Actualizar contadores KPI
+                if(data.team_count !== undefined) document.getElementById('team-member-count').textContent = data.team_count;
+                if(data.deliverable_count !== undefined) document.getElementById('deliverable-count').textContent = data.deliverable_count;
+
+                if (isModalForm) actionModal.hide();
+                if(form.id.startsWith('add-')) form.reset();
+
+            } else {
+                showAlert(data.message || 'Ocurrió un error. Revisa los campos.', 'danger');
+            }
+        } catch (error) {
+            console.error('Error en fetch:', error);
+            showAlert('Error de conexión con el servidor.', 'danger');
+        }
+    }
+
+    // 1. Manejar formularios de AÑADIR (Entregable, Miembro, Seguimiento)
+    document.querySelectorAll('#add-entregable-form, #add-miembro-form, #add-seguimiento-form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            handleFormSubmit(this, this.action, 'POST');
+        });
+    });
+
+    // 2. Manejar botones de ACCIÓN (Editar, Eliminar) usando delegación de eventos
+    document.getElementById('v-pills-tabContent').addEventListener('click', async function(e) {
+        const button = e.target.closest('.action-btn');
+        if (!button) return;
+
+        e.preventDefault();
+        const url = button.dataset.url;
+        
+        try {
+            const response = await fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!response.ok) throw new Error('No se pudo cargar el contenido.');
+            
+            modalContentWrapper.innerHTML = await response.text();
+            actionModal.show();
+        } catch (error) {
+            console.error('Error al cargar modal:', error);
+            showAlert('No se pudo cargar la acción.', 'danger');
+        }
+    });
+
+    // 3. Manejar el envío del FORMULARIO DENTRO DEL MODAL
+    modalContentWrapper.addEventListener('submit', function(e) {
+        const form = e.target.closest('form');
+        if (!form) return;
+        
+        e.preventDefault();
+        handleFormSubmit(form, form.action, 'POST', true);
+    });
+
+    // 4. Recordar la última pestaña activa para mejorar la experiencia de usuario
+    const tabSelector = '.nav-pills .nav-link';
+    try {
+        const lastTab = localStorage.getItem('lastActiveProjectTab');
+        if (lastTab) {
+            const tabElement = document.querySelector(`[data-bs-target="${lastTab}"]`);
+            if(tabElement) new bootstrap.Tab(tabElement).show();
+        }
+    } catch (e) {
+        console.warn("LocalStorage no está disponible. No se guardará el estado de la pestaña.");
+    }
+    
+    document.querySelectorAll(tabSelector).forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function(event) {
+            try {
+                localStorage.setItem('lastActiveProjectTab', event.target.getAttribute('data-bs-target'));
+            } catch (e) {
+                // No hacer nada si localStorage no está disponible
+            }
+        });
+    });
 });
 </script>
 {% endblock %}

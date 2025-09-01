@@ -325,9 +325,17 @@ class SeguimientoProyecto(models.Model):
         return f"Seguimiento en {self.proyecto.nombre_proyecto} el {self.fecha.strftime('%d-%m-%Y')}"
     
 class KanbanColumna(models.Model):
-    """Representa una columna en el tablero Kanban de un proyecto (Ej: 'Por Hacer', 'En Progreso')."""
+    """Representa una columna en el tablero Kanban de un proyecto."""
     proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='kanban_columnas')
     titulo = models.CharField(max_length=100)
+    
+    # --- ✅ NUEVO CAMPO PARA EL ÍCONO ---
+    icono = models.CharField(
+        max_length=50, 
+        blank=True, 
+        help_text="Clase de Font Awesome (ej: 'fas fa-check-circle')."
+    )
+    
     orden = models.PositiveIntegerField(default=0, help_text="Orden de la columna en el tablero.")
 
     class Meta:
@@ -337,7 +345,6 @@ class KanbanColumna(models.Model):
 
     def __str__(self):
         return f"{self.titulo} (Proyecto: {self.proyecto.id})"
-
 class KanbanTarea(models.Model):
     """Representa una tarjeta o tarea dentro de una columna Kanban."""
     columna = models.ForeignKey(KanbanColumna, on_delete=models.CASCADE, related_name='tareas')

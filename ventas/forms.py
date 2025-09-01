@@ -146,10 +146,10 @@ class SeguimientoProyectoForm(forms.ModelForm):
         
 # --- NUEVO FORMULARIO PARA TAREAS KANBAN ---
 class KanbanTareaForm(forms.ModelForm):
-    """Formulario para editar una tarea del tablero Kanban."""
+    """Formulario para crear o editar una tarea del tablero Kanban."""
     class Meta:
         model = KanbanTarea
-        fields = ['titulo', 'descripcion']
+        fields = ['titulo', 'descripcion'] # Se podrían añadir más campos como 'prioridad' si existiera en el modelo
         widgets = {
             'titulo': forms.TextInput(attrs={'class': 'form-control'}),
             'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),

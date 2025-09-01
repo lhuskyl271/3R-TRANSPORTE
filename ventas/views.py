@@ -662,9 +662,24 @@ def add_entregable(request, proyecto_pk):
             entregable = form.save(commit=False)
             entregable.proyecto = proyecto
             entregable.save()
+            
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                html = render_to_string('ventas/snippets/entregable_item.html', {'entregable': entregable}, request=request)
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Entregable añadido correctamente.',
+                    'action': 'create',
+                    'list_id': 'entregables-list',
+                    'html': html,
+                    'deliverable_count': proyecto.entregables.count()
+                })
             messages.success(request, "Entregable añadido correctamente.")
-        else:
-            messages.error(request, "Error al añadir el entregable.")
+            return redirect('prospecto-detail', pk=proyecto.prospecto.pk)
+    
+    # Manejo de error si el formulario no es válido
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'status': 'error', 'message': 'Hubo un error con los datos enviados.'}, status=400)
+    messages.error(request, "Error al añadir el entregable.")
     return redirect('prospecto-detail', pk=proyecto.prospecto.pk)
 
 @login_required
@@ -677,9 +692,22 @@ def add_seguimiento_proyecto(request, proyecto_pk):
             seguimiento.proyecto = proyecto
             seguimiento.creado_por = request.user
             seguimiento.save()
+
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                html = render_to_string('ventas/snippets/seguimiento_item.html', {'item': seguimiento}, request=request)
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Seguimiento del proyecto registrado.',
+                    'action': 'create',
+                    'list_id': 'seguimiento-list',
+                    'html': html
+                })
             messages.success(request, "Seguimiento del proyecto registrado.")
-        else:
-            messages.error(request, "Error al registrar el seguimiento.")
+            return redirect('prospecto-detail', pk=proyecto.prospecto.pk)
+            
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'status': 'error', 'message': 'La nota no puede estar vacía.'}, status=400)
+    messages.error(request, "Error al registrar el seguimiento.")
     return redirect('prospecto-detail', pk=proyecto.prospecto.pk)
 
 @login_required
@@ -689,16 +717,31 @@ def asignar_miembro_equipo(request, proyecto_pk):
         form = AsignarMiembroEquipoForm(request.POST)
         if form.is_valid():
             miembro = form.save(commit=False)
-            miembro.proyecto = proyecto
-            # Validar que no se añada dos veces
             if EquipoProyecto.objects.filter(proyecto=proyecto, trabajador=miembro.trabajador).exists():
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({'status': 'error', 'message': f"El trabajador '{miembro.trabajador}' ya forma parte del equipo."}, status=400)
                 messages.warning(request, f"El trabajador '{miembro.trabajador}' ya forma parte del equipo.")
             else:
+                miembro.proyecto = proyecto
                 miembro.save()
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    html = render_to_string('ventas/snippets/miembro_item.html', {'miembro': miembro}, request=request)
+                    return JsonResponse({
+                        'status': 'success',
+                        'message': f"'{miembro.trabajador}' ha sido añadido al equipo del proyecto.",
+                        'action': 'create',
+                        'list_id': 'miembros-list',
+                        'html': html,
+                        'team_count': proyecto.equipoproyecto_set.count()
+                    })
                 messages.success(request, f"'{miembro.trabajador}' ha sido añadido al equipo del proyecto.")
         else:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'error', 'message': 'Error al asignar al miembro del equipo.'}, status=400)
             messages.error(request, "Error al asignar al miembro del equipo.")
+    
     return redirect('prospecto-detail', pk=proyecto.prospecto.pk)
+
 
 class ProyectoDetailView(LoginRequiredMixin, DetailView):
     """
@@ -730,9 +773,6 @@ class ProyectoDetailView(LoginRequiredMixin, DetailView):
         return context
     
 class ProyectoFlujoTrabajoView(LoginRequiredMixin, DetailView):
-    """
-    Renderiza el tablero Kanban interactivo para un proyecto.
-    """
     model = Proyecto
     template_name = 'ventas/proyecto_flujo_trabajo.html'
     context_object_name = 'proyecto'
@@ -740,8 +780,6 @@ class ProyectoFlujoTrabajoView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         proyecto = self.get_object()
-
-        # Preparamos los datos para la librería jKanban en formato JSON
         boards = []
         columnas = proyecto.kanban_columnas.prefetch_related('tareas').all()
         
@@ -749,14 +787,15 @@ class ProyectoFlujoTrabajoView(LoginRequiredMixin, DetailView):
             items = []
             for tarea in columna.tareas.all():
                 items.append({
-                    'id': tarea.id,
+                    'id': str(tarea.id),
                     'title': tarea.titulo,
-                    'description': tarea.descripcion, # Pasamos la descripción
+                    'description': tarea.descripcion,
                 })
             
             boards.append({
                 'id': str(columna.id),
                 'title': columna.titulo,
+                'icon': columna.icono,  # <-- ✅ Pasamos el ícono al frontend
                 'item': items
             })
         
@@ -784,44 +823,57 @@ def mover_tarea_api(request):
             return JsonResponse({'status': 'error', 'message': 'Tarea o columna no encontrada'}, status=404)
             
     return JsonResponse({'status': 'error'}, status=400)
+
 @login_required
 def crear_columna_api(request, proyecto_pk):
     if request.method == 'POST':
         data = json.loads(request.body)
         titulo = data.get('titulo')
+        icono = data.get('icono', '')  # <-- ✅ Obtenemos el ícono
         proyecto = get_object_or_404(Proyecto, pk=proyecto_pk)
         
         if titulo:
-            # Creamos la nueva columna con un orden al final
             ultima_columna = proyecto.kanban_columnas.order_by('-orden').first()
             nuevo_orden = (ultima_columna.orden + 1) if ultima_columna else 0
             
-            columna = KanbanColumna.objects.create(proyecto=proyecto, titulo=titulo, orden=nuevo_orden)
-            return JsonResponse({'status': 'success', 'id': columna.id, 'titulo': columna.titulo})
+            columna = KanbanColumna.objects.create(
+                proyecto=proyecto, 
+                titulo=titulo, 
+                icono=icono,  # <-- ✅ Guardamos el ícono
+                orden=nuevo_orden
+            )
+            return JsonResponse({'status': 'success', 'id': str(columna.id), 'titulo': columna.titulo, 'icono': columna.icono})
     return JsonResponse({'status': 'error'}, status=400)
+
 
 # --- NUEVA VISTA API ---
 @login_required
 def actualizar_columna_api(request, columna_pk):
     columna = get_object_or_404(KanbanColumna, pk=columna_pk)
-    # Aquí puedes añadir una comprobación de permisos si es necesario
     if request.method == 'POST':
         data = json.loads(request.body)
         nuevo_titulo = data.get('titulo')
-        if nuevo_titulo:
-            columna.titulo = nuevo_titulo
-            columna.save()
-            return JsonResponse({'status': 'success', 'nuevo_titulo': nuevo_titulo})
-    return JsonResponse({'status': 'error', 'message': 'Petición inválida'}, status=400)
+        nuevo_icono = data.get('icono') # Puede ser None si no se envía
 
+        if nuevo_titulo and nuevo_titulo.strip():
+            columna.titulo = nuevo_titulo
+        
+        if nuevo_icono is not None: # Si se envió el campo 'icono' (incluso si está vacío)
+            columna.icono = nuevo_icono
+
+        columna.save()
+        return JsonResponse({'status': 'success', 'nuevo_titulo': columna.titulo, 'nuevo_icono': columna.icono})
+    return JsonResponse({'status': 'error', 'message': 'Petición inválida'}, status=400)
 # --- NUEVA VISTA API ---
 @login_required
 def eliminar_columna_api(request, columna_pk):
+    """API para eliminar una columna y todas sus tareas."""
     columna = get_object_or_404(KanbanColumna, pk=columna_pk)
-    if request.method == 'POST': # Usamos POST para la simplicidad del frontend
+    if request.method == 'POST':
         columna.delete() # Gracias a on_delete=CASCADE, las tareas se borrarán también
         return JsonResponse({'status': 'success'})
     return JsonResponse({'status': 'error', 'message': 'Petición inválida'}, status=400)
+
 
 @login_required
 def crear_tarea_api(request, columna_pk):
@@ -831,25 +883,28 @@ def crear_tarea_api(request, columna_pk):
         columna = get_object_or_404(KanbanColumna, pk=columna_pk)
         
         if titulo:
-            # Creamos la nueva tarea con un orden al final de la columna
             ultima_tarea = columna.tareas.order_by('-orden').first()
             nuevo_orden = (ultima_tarea.orden + 1) if ultima_tarea else 0
 
             tarea = KanbanTarea.objects.create(columna=columna, titulo=titulo, orden=nuevo_orden)
-            return JsonResponse({'status': 'success', 'id': tarea.id, 'titulo': tarea.titulo})
-    return JsonResponse({'status': 'error'}, status=400)
+            return JsonResponse({'status': 'success', 'id': str(tarea.id), 'titulo': tarea.titulo})
+    return JsonResponse({'status': 'error', 'message': 'Título no proporcionado'}, status=400)
 
 # --- NUEVA VISTA API ---
 @login_required
 def actualizar_tarea_api(request, tarea_pk):
+    """API para actualizar los detalles de una tarea."""
     tarea = get_object_or_404(KanbanTarea, pk=tarea_pk)
     if request.method == 'POST':
         data = json.loads(request.body)
+        # Usamos el form para validar y limpiar los datos
         form = KanbanTareaForm(data, instance=tarea)
         if form.is_valid():
             form.save()
+            # Devolvemos los datos actualizados para reflejarlos en el frontend
             return JsonResponse({
                 'status': 'success',
+                'id': str(tarea.id),
                 'titulo': form.cleaned_data['titulo'],
                 'descripcion': form.cleaned_data['descripcion']
             })
@@ -859,131 +914,172 @@ def actualizar_tarea_api(request, tarea_pk):
 # --- NUEVA VISTA API ---
 @login_required
 def eliminar_tarea_api(request, tarea_pk):
+    """API para eliminar una tarea."""
     tarea = get_object_or_404(KanbanTarea, pk=tarea_pk)
-    if request.method == 'POST': # Usamos POST por simplicidad
+    if request.method == 'POST':
         tarea.delete()
         return JsonResponse({'status': 'success'})
     return JsonResponse({'status': 'error', 'message': 'Petición inválida'}, status=400)
 
 
-@login_required
-def mover_tarea_api(request):
-    if request.method == 'POST':
-        data = json.loads(request.body)
-        tarea_id = data.get('tarea_id')
-        nueva_columna_id = data.get('nueva_columna_id')
-        
-        try:
-            tarea = KanbanTarea.objects.get(pk=tarea_id)
-            nueva_columna = KanbanColumna.objects.get(pk=nueva_columna_id)
-            
-            tarea.columna = nueva_columna
-            # Aquí podrías añadir lógica para reordenar las tareas
-            tarea.save()
-            
-            return JsonResponse({'status': 'success'})
-        except (KanbanTarea.DoesNotExist, KanbanColumna.DoesNotExist):
-            return JsonResponse({'status': 'error', 'message': 'Tarea o columna no encontrada'}, status=404)
-            
-    return JsonResponse({'status': 'error'}, status=400)
-
 class EntregableUpdateView(LoginRequiredMixin, UpdateView):
-    """Actualiza un entregable existente."""
     model = Entregable
     form_class = EntregableForm
-    template_name = 'ventas/snippets/entregable_form.html' # Un template parcial para el modal
+    template_name = 'ventas/snippets/entregable_form.html'
 
-    def get_success_url(self):
+    def get(self, request, *args, **kwargs):
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            self.object = self.get_object()
+            return render(request, self.template_name, self.get_context_data())
+        return super().get(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            entregable = form.save()
+            html = render_to_string('ventas/snippets/entregable_item.html', {'entregable': entregable}, request=self.request)
+            return JsonResponse({
+                'status': 'success',
+                'message': f"Entregable '{entregable.nombre}' actualizado.",
+                'action': 'update',
+                'list_id': 'entregables-list',
+                'id': entregable.pk,
+                'html': html
+            })
         messages.success(self.request, f"Entregable '{self.object.nombre}' actualizado.")
-        # Redirige de vuelta al detalle del proyecto
-        return reverse('prospecto-detail', kwargs={'pk': self.object.proyecto.prospecto.pk})
+        return redirect('prospecto-detail', kwargs={'pk': self.object.proyecto.prospecto.pk})
 
 class EntregableDeleteView(LoginRequiredMixin, DeleteView):
-    """Elimina un entregable."""
     model = Entregable
-    template_name = 'ventas/snippets/entregable_confirm_delete.html' # Parcial para el modal
+    template_name = 'ventas/snippets/entregable_confirm_delete.html'
 
-    def get_success_url(self):
+    def get(self, request, *args, **kwargs):
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            self.object = self.get_object()
+            return render(request, self.template_name, self.get_context_data())
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            entregable = self.get_object()
+            entregable_id = entregable.pk
+            entregable_nombre = entregable.nombre
+            proyecto = entregable.proyecto
+            entregable.delete()
+            return JsonResponse({
+                'status': 'success',
+                'message': f"Entregable '{entregable_nombre}' eliminado.",
+                'action': 'delete',
+                'list_id': 'entregables-list',
+                'id': entregable_id,
+                'deliverable_count': proyecto.entregables.count()
+            })
+        
+        self.object = self.get_object()
+        success_url = self.get_success_url()
         messages.success(self.request, f"Entregable '{self.object.nombre}' eliminado.")
-        return reverse('prospecto-detail', kwargs={'pk': self.object.proyecto.prospecto.pk})
+        self.object.delete()
+        return redirect(success_url)
     
 class DesasignarMiembroEquipoView(LoginRequiredMixin, DeleteView):
-    """Elimina la asignación de un trabajador de un proyecto."""
     model = EquipoProyecto
     template_name = 'ventas/snippets/miembro_confirm_delete.html'
 
-    def get_success_url(self):
-        messages.info(self.request, f"Se ha quitado a '{self.object.trabajador.nombre}' del equipo.")
-        return reverse('prospecto-detail', kwargs={'pk': self.object.proyecto.prospecto.pk})
+    def get(self, request, *args, **kwargs):
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            self.object = self.get_object()
+            return render(request, self.template_name, self.get_context_data())
+        return super().get(request, *args, **kwargs)
 
+    def post(self, request, *args, **kwargs):
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            miembro = self.get_object()
+            miembro_id = miembro.pk
+            trabajador_nombre = miembro.trabajador.nombre
+            proyecto = miembro.proyecto
+            miembro.delete()
+            return JsonResponse({
+                'status': 'success',
+                'message': f"Se ha quitado a '{trabajador_nombre}' del equipo.",
+                'action': 'delete',
+                'list_id': 'miembros-list',
+                'id': miembro_id,
+                'team_count': proyecto.equipoproyecto_set.count()
+            })
+        
+        return super().post(request, *args, **kwargs)
 class SeguimientoProyectoUpdateView(LoginRequiredMixin, UpdateView):
     """Actualiza una nota de seguimiento."""
     model = SeguimientoProyecto
     form_class = SeguimientoProyectoForm
     template_name = 'ventas/snippets/seguimiento_form.html'
 
-    def get_success_url(self):
+    # ✅ AÑADIR ESTE MÉTODO
+    def get(self, request, *args, **kwargs):
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            self.object = self.get_object()
+            return render(request, self.template_name, self.get_context_data())
+        return super().get(request, *args, **kwargs)
+
+    # ✅ AÑADIR LÓGICA AJAX A form_valid
+    def form_valid(self, form):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            seguimiento = form.save()
+            html = render_to_string('ventas/snippets/seguimiento_item.html', {'item': seguimiento}, request=self.request)
+            return JsonResponse({
+                'status': 'success',
+                'message': 'La nota de seguimiento ha sido actualizada.',
+                'action': 'update',
+                'list_id': 'seguimiento-list',
+                'id': seguimiento.pk,
+                'html': html
+            })
         messages.success(self.request, "La nota de seguimiento ha sido actualizada.")
-        return reverse('prospecto-detail', kwargs={'pk': self.object.proyecto.prospecto.pk})
+        return redirect('prospecto-detail', kwargs={'pk': self.object.proyecto.prospecto.pk})
 
 class SeguimientoProyectoDeleteView(LoginRequiredMixin, DeleteView):
     """Elimina una nota de seguimiento."""
     model = SeguimientoProyecto
     template_name = 'ventas/snippets/seguimiento_confirm_delete.html'
 
-    def get_success_url(self):
-        messages.success(self.request, "La nota de seguimiento ha sido eliminada.")
-        return reverse('prospecto-detail', kwargs={'pk': self.object.proyecto.prospecto.pk})
-    
-    
-@login_required
-def guardar_diagrama_api(request, proyecto_pk):
-    """API para crear o actualizar un diagrama vía AJAX."""
-    proyecto = get_object_or_404(Proyecto, pk=proyecto_pk)
-    if request.method == 'POST':
-        data = json.loads(request.body)
-        diagrama_id = data.get('id')
-        titulo = data.get('titulo', 'Diagrama sin título')
-        codigo = data.get('codigo', '')
+    # ✅ AÑADIR ESTE MÉTODO
+    def get(self, request, *args, **kwargs):
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            self.object = self.get_object()
+            return render(request, self.template_name, self.get_context_data())
+        return super().get(request, *args, **kwargs)
 
-        # Si se proporciona un ID, se actualiza. Si no, se crea uno nuevo.
-        diagrama, created = DiagramaProyecto.objects.update_or_create(
-            id=diagrama_id,
-            defaults={'proyecto': proyecto, 'titulo': titulo, 'codigo': codigo}
-        )
-        return JsonResponse({'status': 'success', 'diagrama_id': diagrama.id})
-    return JsonResponse({'status': 'error'}, status=400)
+    # ✅ REEMPLAZAR EL MÉTODO post
+    def post(self, request, *args, **kwargs):
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            seguimiento = self.get_object()
+            seguimiento_id = seguimiento.pk
+            seguimiento.delete()
+            return JsonResponse({
+                'status': 'success',
+                'message': 'La nota de seguimiento ha sido eliminada.',
+                'action': 'delete',
+                'list_id': 'seguimiento-list',
+                'id': seguimiento_id
+            })
+        
+        # Lógica original como fallback
+        self.object = self.get_object()
+        success_url = self.get_success_url()
+        messages.success(self.request, "La nota de seguimiento ha sido eliminada.")
+        self.object.delete()
+        return redirect(success_url)
+    
 
 
 from django.http import JsonResponse, HttpResponse
 from django.template.loader import render_to_string
 from .models import DiagramaProyecto
-import json
 # Importar WeasyPrint si no está ya
 try:
     from weasyprint import HTML
 except ImportError:
     HTML = None
 
-@login_required
-def descargar_diagrama_pdf(request, diagrama_pk):
-    """Genera un PDF a partir del código de un diagrama usando WeasyPrint."""
-    if HTML is None:
-        return HttpResponse("WeasyPrint no está instalado.", status=501)
-        
-    diagrama = get_object_or_404(DiagramaProyecto, pk=diagrama_pk)
-    
-    html_string = render_to_string('ventas/pdf/diagrama_pdf_template.html', {
-        'diagrama': diagrama
-    })
-    
-    html = HTML(string=html_string)
-    pdf = html.write_pdf()
-    
-    response = HttpResponse(pdf, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="diagrama_{diagrama.titulo}.pdf"'
-    
-    return response
 
 # ✅ NUEVA VISTA: Para renderizar la página del editor de diagramas
 class DiagramaEditorView(LoginRequiredMixin, TemplateView):
@@ -1006,43 +1102,59 @@ class DiagramaEditorView(LoginRequiredMixin, TemplateView):
 @login_required
 def get_diagrama_api(request, diagrama_pk):
     diagrama = get_object_or_404(DiagramaProyecto, pk=diagrama_pk)
-    # Aquí podrías añadir una comprobación de permisos
     return JsonResponse({
         'id': diagrama.id,
         'titulo': diagrama.titulo,
-        'codigo': json.loads(diagrama.codigo) # Devolvemos el JSON como un objeto
+        # Aquí se decodifica el string de la BD a un objeto JSON para el cliente
+        'codigo': json.loads(diagrama.codigo) 
     })
 
 # ✏️ VISTA MODIFICADA: Para guardar el JSON y el SVG del diagrama
 @login_required
 def guardar_diagrama_api(request, proyecto_pk):
-    """API para crear o actualizar un diagrama desde el editor JointJS."""
+    """
+    API para crear o actualizar un diagrama desde el editor JointJS.
+    Esta es la versión corregida y definitiva.
+    """
     proyecto = get_object_or_404(Proyecto, pk=proyecto_pk)
+    
     if request.method == 'POST':
-        data = json.loads(request.body)
-        diagrama_id = data.get('id')
-        titulo = data.get('titulo', 'Diagrama sin título')
-        
-        # El 'codigo' ahora es el JSON del grafo de JointJS
-        codigo_json = json.dumps(data.get('codigo', {})) 
-        
-        # El SVG se envía desde el cliente
-        svg_code = data.get('svg', '')
+        try:
+            # 1. Parseamos el cuerpo del request, que es un JSON principal
+            data = json.loads(request.body)
+            
+            diagrama_id = data.get('id')
+            titulo = data.get('titulo', 'Diagrama sin título')
+            
+            # 2. Extraemos el 'codigo'. Su valor es un STRING que contiene el JSON del diagrama.
+            #    Esto es correcto porque el frontend ya hizo JSON.stringify() sobre el objeto del grafo.
+            codigo_json_string = data.get('codigo', '{}')
+            
+            # 3. Extraemos la representación SVG, que también es un string.
+            svg_code = data.get('svg', '')
 
-        # Si se proporciona un ID, se actualiza. Si no, se crea uno nuevo.
-        diagrama, created = DiagramaProyecto.objects.update_or_create(
-            id=diagrama_id,
-            defaults={
-                'proyecto': proyecto, 
-                'titulo': titulo, 
-                'codigo': codigo_json,
-                'svg_representation': svg_code # Guardamos el SVG
-            }
-        )
-        return JsonResponse({'status': 'success', 'diagrama_id': diagrama.id})
-    return JsonResponse({'status': 'error'}, status=400)
+            # 4. Usamos update_or_create para manejar creación y actualización.
+            #    Guardamos 'codigo_json_string' directamente en el TextField del modelo.
+            diagrama, created = DiagramaProyecto.objects.update_or_create(
+                id=diagrama_id,
+                defaults={
+                    'proyecto': proyecto, 
+                    'titulo': titulo, 
+                    'codigo': codigo_json_string,
+                    'svg_representation': svg_code
+                }
+            )
+            
+            # 5. Devolvemos una respuesta exitosa con el ID del diagrama.
+            return JsonResponse({'status': 'success', 'diagrama_id': diagrama.id})
 
-# ✏️ VISTA MODIFICADA: Para usar el SVG en la generación del PDF
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'JSON inválido en el request.'}, status=400)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'error', 'message': 'Método no permitido.'}, status=405)
+
 @login_required
 def descargar_diagrama_pdf(request, diagrama_pk):
     """Genera un PDF a partir del SVG guardado de un diagrama."""
@@ -1063,3 +1175,21 @@ def descargar_diagrama_pdf(request, diagrama_pk):
     response['Content-Disposition'] = f'attachment; filename="diagrama_{diagrama.titulo}.pdf"'
     
     return response
+
+from django.db import transaction
+
+def reordenar_columnas_api(request, proyecto_pk):
+    if request.method == 'POST':
+        try:
+            # Obtenemos la lista de IDs de las columnas en el nuevo orden
+            ordered_ids = json.loads(request.body).get('orden_columnas', [])
+            
+            with transaction.atomic():
+                for index, columna_id in enumerate(ordered_ids):
+                    KanbanColumna.objects.filter(id=columna_id, proyecto_id=proyecto_pk).update(orden=index)
+            
+            return JsonResponse({'status': 'success', 'message': 'Orden de columnas actualizado.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+            
+    return JsonResponse({'status': 'error', 'message': 'Método no permitido'}, status=405)

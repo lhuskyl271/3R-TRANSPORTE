@@ -44,7 +44,7 @@ from .views import (
     EntregableUpdateView, EntregableDeleteView,
     DesasignarMiembroEquipoView,
     SeguimientoProyectoUpdateView, SeguimientoProyectoDeleteView,guardar_diagrama_api,
-    descargar_diagrama_pdf,DiagramaEditorView,
+    descargar_diagrama_pdf,DiagramaEditorView,reordenar_columnas_api,
     get_diagrama_api,
     guardar_diagrama_api,
     descargar_diagrama_pdf,
@@ -126,9 +126,6 @@ urlpatterns = [
     path('seguimiento/<int:pk>/editar/', SeguimientoProyectoUpdateView.as_view(), name='seguimiento-update'),
     path('seguimiento/<int:pk>/eliminar/', SeguimientoProyectoDeleteView.as_view(), name='seguimiento-delete'),
     
-     # --- URLs para la Herramienta de Diagramas ---
-    path('api/proyecto/<int:proyecto_pk>/guardar-diagrama/', guardar_diagrama_api, name='api-guardar-diagrama'),
-    path('diagrama/<int:diagrama_pk>/descargar-pdf/', descargar_diagrama_pdf, name='descargar-diagrama-pdf'),
     # ✅ NUEVA RUTA: Para abrir el editor gráfico y crear un nuevo diagrama
     path('proyecto/<int:proyecto_pk>/diagrama/crear/', DiagramaEditorView.as_view(), name='diagrama-crear'),
     
@@ -141,4 +138,5 @@ urlpatterns = [
     # Se mantiene la misma URL para guardar, pero su lógica cambiará
     path('api/proyecto/<int:proyecto_pk>/guardar-diagrama/', guardar_diagrama_api, name='api-guardar-diagrama'),
     path('diagrama/<int:diagrama_pk>/descargar-pdf/', descargar_diagrama_pdf, name='descargar-diagrama-pdf'),
+     path('api/proyecto/<int:proyecto_pk>/reordenar-columnas/', reordenar_columnas_api, name='api-reordenar-columnas'),
 ]
