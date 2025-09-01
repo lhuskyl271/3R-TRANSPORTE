@@ -7,37 +7,22 @@
 <script src="https://cdn.jsdelivr.net/npm/jkanban@1.3.1/dist/jkanban.min.js"></script>
 
 <style>
-    /* Estilos para un look más profesional */
-    body { background-color: #f0f2f5; }
-    .main-container { padding-top: 15px; }
-    #kanban-board { overflow-x: auto; padding-bottom: 20px; }
-    .kanban-board { background: transparent; }
-    .kanban-container { background: #f0f2f5; display: flex; }
+    /* ... (tus estilos existentes) ... */
     .kanban-board header {
-        background-color: transparent;
-        font-size: 1rem;
-        font-weight: 600;
-        padding: 10px;
+        /* ... */
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .kanban-title-board { flex-grow: 1; }
+    .board-actions button {
+        background: none;
+        border: none;
         color: #5e6c84;
-    }
-    .kanban-board .kanban-drag {
-        background-color: #dfe1e6;
-        padding: 15px;
-        border-radius: 8px;
-    }
-    .kanban-item {
-        background: white;
-        padding: 10px;
-        margin-bottom: 8px;
-        border-radius: 5px;
-        box-shadow: 0 1px 2px rgba(9,30,66,.25);
         cursor: pointer;
-        transition: all 0.2s;
+        padding: 0 5px;
     }
-    .kanban-item:hover {
-        background-color: #f4f5f7;
-        box-shadow: 0 2px 4px rgba(9,30,66,.25);
-    }
+    .board-actions button:hover { color: #172b4d; }
 </style>
 {% endblock %}
 
@@ -73,76 +58,171 @@
     </div>
 </div>
 
+<div class="modal fade" id="taskModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Tarea</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editTaskId">
+                <div class="mb-3">
+                    <label for="editTaskTitle" class="form-label">Título</label>
+                    <input type="text" class="form-control" id="editTaskTitle">
+                </div>
+                <div class="mb-3">
+                    <label for="editTaskDescription" class="form-label">Descripción</label>
+                    <textarea class="form-control" id="editTaskDescription" rows="4"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger me-auto" id="deleteTaskBtn">Eliminar</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="updateTaskBtn">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     const kanbanData = {{ kanban_data_json|safe }};
     const csrfToken = '{{ csrf_token }}';
+    const taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
 
     const kanban = new jKanban({
         element: "#kanban-board",
         gutter: "15px",
-        widthBoard: "250px",
+        widthBoard: "280px", // Un poco más ancho para los botones
         boards: kanbanData,
+        // --- MODIFICADO: click para abrir el modal ---
         click: function(el) {
-            // Futura funcionalidad: abrir modal para ver/editar detalles de la tarea
-            console.log(`Tarea clickeada: ${el.dataset.eid}`);
+            document.getElementById('editTaskId').value = el.dataset.eid;
+            document.getElementById('editTaskTitle').value = el.dataset.title;
+            // El dataset.description lo añadimos en la configuración de `item`
+            document.getElementById('editTaskDescription').value = el.dataset.description || ''; 
+            taskModal.show();
         },
         dropEl: function(el, target, source, sibling) {
+            // ... (código de dropEl existente) ...
             const tareaId = el.dataset.eid;
             const nuevaColumnaId = target.parentElement.dataset.id;
             
-            // Llamada a la API para notificar el movimiento
             fetch("{% url 'api-mover-tarea' %}", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": csrfToken,
-                },
-                body: JSON.stringify({
-                    tarea_id: tareaId,
-                    nueva_columna_id: nuevaColumnaId
-                }),
+                headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken, },
+                body: JSON.stringify({ tarea_id: tareaId, nueva_columna_id: nuevaColumnaId }),
             })
             .then(response => response.json())
             .then(data => {
-                if (data.status !== 'success') {
-                    console.error('Error al mover la tarea.');
-                    // Aquí podrías revertir el movimiento en la UI si falla
-                }
+                if (data.status !== 'success') console.error('Error al mover la tarea.');
             });
         },
     });
 
-    // Añadir botón de "Nueva Tarea" a cada columna
-    const allColumns = kanban.element.querySelectorAll(".kanban-drag");
-    allColumns.forEach(column => {
-        const columnId = column.closest(".kanban-board").dataset.id;
-        const addTaskBtn = document.createElement("button");
-        addTaskBtn.innerHTML = '<i class="fas fa-plus me-1"></i> Añadir Tarea';
-        addTaskBtn.className = "btn btn-sm btn-secondary w-100 mt-2";
+    // --- NUEVA FUNCIÓN para añadir botones de acción a las columnas ---
+    function addBoardActions(boardId) {
+        const board = kanban.findBoard(boardId);
+        if (!board) return;
+
+        const header = board.querySelector('header');
+        const titleSpan = header.querySelector('.kanban-title-board');
         
-        addTaskBtn.addEventListener("click", function() {
-            const taskTitle = prompt("Introduce el título de la nueva tarea:");
-            if (taskTitle) {
-                // Llamada a la API para crear la tarea
-                fetch(`/api/columna/${columnId}/tarea/crear/`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
-                    body: JSON.stringify({ titulo: taskTitle }),
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'board-actions';
+
+        // Botón Editar
+        const editBtn = document.createElement('button');
+        editBtn.innerHTML = '<i class="fas fa-pencil-alt"></i>';
+        editBtn.title = 'Editar título';
+        editBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const nuevoTitulo = prompt('Nuevo título para la columna:', titleSpan.textContent);
+            if (nuevoTitulo && nuevoTitulo.trim() !== '') {
+                fetch(`/api/columna/${boardId}/actualizar/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify({ titulo: nuevoTitulo }),
                 })
                 .then(res => res.json())
                 .then(data => {
                     if(data.status === 'success') {
-                        kanban.addElement(columnId, { id: data.id, title: data.titulo });
+                        titleSpan.textContent = data.nuevo_titulo;
                     }
                 });
             }
         });
-        column.appendChild(addTaskBtn);
-    });
+
+        // Botón Eliminar
+        const deleteBtn = document.createElement('button');
+        deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+        deleteBtn.title = 'Eliminar columna';
+        deleteBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (confirm('¿Estás seguro de que quieres eliminar esta columna y todas sus tareas?')) {
+                 fetch(`/api/columna/${boardId}/eliminar/`, {
+                    method: 'POST', // Usamos POST por simplicidad
+                    headers: { 'X-CSRFToken': csrfToken },
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.status === 'success') {
+                        kanban.removeBoard(boardId);
+                    }
+                });
+            }
+        });
+
+        actionsDiv.appendChild(editBtn);
+        actionsDiv.appendChild(deleteBtn);
+        header.appendChild(actionsDiv);
+    }
+    
+    // --- MODIFICADO: Añadir botones a columnas existentes y nuevas ---
+    function setupAllBoards() {
+        const allColumns = kanban.element.querySelectorAll(".kanban-drag");
+        allColumns.forEach(column => {
+            const columnId = column.closest(".kanban-board").dataset.id;
+            
+            // Limpiar botones antiguos si ya existen
+            const existingBtn = column.querySelector('.add-task-btn');
+            if (existingBtn) existingBtn.remove();
+            
+            const addTaskBtn = document.createElement("button");
+            addTaskBtn.innerHTML = '<i class="fas fa-plus me-1"></i> Añadir Tarea';
+            addTaskBtn.className = "btn btn-sm btn-secondary w-100 mt-2 add-task-btn";
+            
+            addTaskBtn.addEventListener("click", function() {
+                const taskTitle = prompt("Introduce el título de la nueva tarea:");
+                if (taskTitle) {
+                    fetch(`/api/columna/${columnId}/tarea/crear/`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+                        body: JSON.stringify({ titulo: taskTitle }),
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if(data.status === 'success') {
+                            kanban.addElement(columnId, { id: data.id, title: data.titulo, description: '' });
+                        }
+                    });
+                }
+            });
+            column.appendChild(addTaskBtn);
+
+            // Añadir botones de editar/eliminar a la cabecera
+            const existingActions = column.closest('.kanban-board').querySelector('.board-actions');
+            if (!existingActions) {
+                 addBoardActions(columnId);
+            }
+        });
+    }
 
     // Lógica para guardar nueva columna
     document.getElementById("saveColumnBtn").addEventListener("click", function() {
+        // ... (código existente para guardar columna) ...
         const title = document.getElementById("newColumnTitle").value;
         if (!title) return;
 
@@ -155,10 +235,61 @@ document.addEventListener("DOMContentLoaded", function() {
         .then(data => {
             if (data.status === 'success') {
                 kanban.addBoards([{ id: data.id, title: data.titulo, item: [] }]);
-                location.reload(); // Recargamos para que se añada el botón de "Añadir Tarea"
+                // Re-inicializamos los botones en todas las columnas
+                setupAllBoards(); 
+                document.getElementById("newColumnTitle").value = '';
+                var addColumnModal = bootstrap.Modal.getInstance(document.getElementById('addColumnModal'));
+                addColumnModal.hide();
             }
         });
     });
+    
+    // --- NUEVO: Lógica del modal de edición de tareas ---
+    document.getElementById('updateTaskBtn').addEventListener('click', function() {
+        const taskId = document.getElementById('editTaskId').value;
+        const title = document.getElementById('editTaskTitle').value;
+        const description = document.getElementById('editTaskDescription').value;
+
+        fetch(`/api/tarea/${taskId}/actualizar/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ titulo: title, descripcion: description }),
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const element = kanban.findElement(taskId);
+                element.textContent = data.titulo; // Actualiza el texto visible
+                element.dataset.title = data.titulo; // Actualiza el dataset
+                element.dataset.description = data.descripcion; // Actualiza el dataset
+                taskModal.hide();
+            } else {
+                alert('Error al actualizar la tarea.');
+            }
+        });
+    });
+
+    document.getElementById('deleteTaskBtn').addEventListener('click', function() {
+        const taskId = document.getElementById('editTaskId').value;
+        if (confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
+            fetch(`/api/tarea/${taskId}/eliminar/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    kanban.removeElement(taskId);
+                    taskModal.hide();
+                } else {
+                    alert('Error al eliminar la tarea.');
+                }
+            });
+        }
+    });
+
+    // Llamada inicial para configurar los tableros cargados
+    setupAllBoards();
 });
 </script>
 {% endblock %}
