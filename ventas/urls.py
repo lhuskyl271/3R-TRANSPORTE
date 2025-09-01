@@ -37,9 +37,6 @@ from .views import (
     crear_columna_api,
     crear_tarea_api,
     mover_tarea_api,
-    # --- ✅ Vistas nuevas importadas ---
-    ProyectoDiagramaView,
-    guardar_diagrama_api,
 )
 
 urlpatterns = [
@@ -62,6 +59,7 @@ urlpatterns = [
 
     # --- Clientes y Proyectos ---
     path('clientes/', ClienteCerradoListView.as_view(), name='cliente-cerrado-list'),
+    # --- ✅ NUEVA RUTA PARA LA VISTA DE DETALLE DEL PROYECTO ---
     path('proyecto/<int:pk>/', ProyectoDetailView.as_view(), name='proyecto-detail'),
 
     # --- Interacciones ---
@@ -94,17 +92,10 @@ urlpatterns = [
     path('proyecto/<int:proyecto_pk>/add-seguimiento/', add_seguimiento_proyecto, name='add-seguimiento-proyecto'),
     path('proyecto/<int:proyecto_pk>/asignar-miembro/', asignar_miembro_equipo, name='asignar-miembro-equipo'),
     
-    # --- RUTA PARA EL KANBAN ---
+    # --- ✅ NUEVAS RUTAS PARA EL FLUJO DE TRABAJO (KANBAN) ---
     path('proyecto/<int:pk>/flujo-trabajo/', ProyectoFlujoTrabajoView.as_view(), name='proyecto-flujo-trabajo'),
-    
-    # --- ✅ NUEVA RUTA PARA EL DIAGRAMA DE FLUJO ---
-    path('proyecto/<int:pk>/diagrama/', ProyectoDiagramaView.as_view(), name='proyecto-diagrama'),
-
-    # --- APIS del Kanban ---
     path('api/proyecto/<int:proyecto_pk>/columna/crear/', crear_columna_api, name='api-crear-columna'),
     path('api/columna/<int:columna_pk>/tarea/crear/', crear_tarea_api, name='api-crear-tarea'),
     path('api/tarea/mover/', mover_tarea_api, name='api-mover-tarea'),
 
-    # --- ✅ NUEVA API del Diagrama ---
-    path('api/proyecto/<int:proyecto_pk>/guardar-diagrama/', guardar_diagrama_api, name='api-guardar-diagrama'),
 ]

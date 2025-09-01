@@ -34,8 +34,6 @@ import pytz
 from django.core.paginator import Paginator
 from django.db.models import Subquery, OuterRef, Case, When, F, IntegerField
 from django.http import JsonResponse
-from django.views.decorators.http import require_POST
-from django.views.decorators.csrf import csrf_exempt
 
 
 # ==============================================================================
@@ -764,22 +762,6 @@ class ProyectoFlujoTrabajoView(LoginRequiredMixin, DetailView):
         context['kanban_data_json'] = json.dumps(boards)
         return context
 
-# --- ✅ NUEVA VISTA PARA EL DIAGRAMA DE FLUJO ---
-class ProyectoDiagramaView(LoginRequiredMixin, DetailView):
-    """
-    Renderiza el editor de diagramas de flujo (Drawflow) para un proyecto.
-    """
-    model = Proyecto
-    template_name = 'ventas/proyecto_diagrama.html'
-    context_object_name = 'proyecto'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        proyecto = self.get_object()
-        # Pasamos los datos del diagrama guardado, o un objeto vacío si no existe.
-        context['diagrama_data_json'] = json.dumps(proyecto.diagrama_flujo_data or {})
-        return context
-
 # --- Vistas de API para manejar acciones del Kanban ---
 
 @login_required
@@ -834,29 +816,3 @@ def mover_tarea_api(request):
             return JsonResponse({'status': 'error', 'message': 'Tarea o columna no encontrada'}, status=404)
             
     return JsonResponse({'status': 'error'}, status=400)
-
-# --- ✅ NUEVA VISTA DE API PARA GUARDAR EL DIAGRAMA ---
-@csrf_exempt # Usar con precaución, idealmente configurar bien el CSRF en el fetch del front.
-@require_POST
-@login_required
-def guardar_diagrama_api(request, proyecto_pk):
-    try:
-        proyecto = get_object_or_404(Proyecto, pk=proyecto_pk)
-        
-        # Aquí puedes añadir una capa de seguridad para verificar permisos
-        # if proyecto.prospecto.asignado_a != request.user and not request.user.is_superuser:
-        #     return JsonResponse({'status': 'error', 'message': 'Permiso denegado'}, status=403)
-
-        data = json.loads(request.body)
-        
-        # Validar que el JSON no sea malicioso (opcional pero recomendado)
-        
-        proyecto.diagrama_flujo_data = data
-        proyecto.save()
-        
-        return JsonResponse({'status': 'success', 'message': 'Diagrama guardado correctamente.'})
-    
-    except json.JSONDecodeError:
-        return JsonResponse({'status': 'error', 'message': 'JSON inválido.'}, status=400)
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

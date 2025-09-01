@@ -274,14 +274,6 @@ class Proyecto(models.Model):
         related_name="proyectos_asignados"
     )
 
-    # --- ✅ NUEVO CAMPO PARA EL DIAGRAMA DE FLUJO ---
-    diagrama_flujo_data = models.JSONField(
-        null=True, 
-        blank=True, 
-        verbose_name="Datos del Diagrama de Flujo",
-        help_text="Almacena la estructura del diagrama de Drawflow en formato JSON."
-    )
-
     def __str__(self):
         return f"Proyecto: {self.nombre_proyecto or self.prospecto.nombre_completo}"
 
@@ -360,3 +352,4 @@ class KanbanTarea(models.Model):
 
     def __str__(self):
         return self.titulo
+
