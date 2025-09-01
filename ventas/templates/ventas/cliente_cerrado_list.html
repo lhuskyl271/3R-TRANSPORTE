@@ -1,20 +1,547 @@
-{% for cliente in clientes %}
-<tr>
-    <td>
-        <a href="{% url 'proyecto-detail' cliente.proyecto.pk %}"><strong>{{ cliente.nombre_completo }}</strong></a>
-    </td>
-    <td>{{ cliente.empresa|default:"N/A" }}</td>
-    <td>{{ cliente.email }}</td>
-    <td>{{ cliente.telefono|default:"N/A" }}</td>
-    <td>{{ cliente.fecha_actualizacion|date:"d M Y, H:i" }}</td>
-    <td>
-        <a href="{% url 'proyecto-detail' cliente.proyecto.pk %}" class="btn btn-sm btn-outline-primary" title="Gestionar Proyecto">
-            <i class="fas fa-tasks"></i>
-        </a>
-        <a href="{% url 'prospecto-update' cliente.pk %}" class="btn btn-sm btn-outline-warning" title="Editar Cliente">
-            <i class="fas fa-edit"></i>
-        </a>
-    </td>
-</tr>
-{% empty %}
-{% endfor %}
+{% extends "base.html" %}
+
+{% block title %}Clientes Cerrados{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --table-font-size: clamp(0.85rem, 1.15vw, 1.05rem);
+        --table-header-size: clamp(0.75rem, 1vw, 0.9rem);
+        --action-btn-size: clamp(32px, 2.8vw, 40px);
+        --border-radius-xl: clamp(12px, 1.5vw, 16px);
+        
+        --card-bg: #ffffff;
+        --text-primary: #2c3e50;
+        --text-secondary: #5c6b7a;
+        --border-color: rgba(0, 0, 0, 0.08);
+        --hover-bg: rgba(0, 0, 0, 0.02);
+        --primary-color: #2c3e50;
+    }
+
+    .clientes-container {
+        display: flex;
+        flex-direction: column;
+        gap: clamp(1.25rem, 3vw, 2rem);
+        max-width: 1800px;
+        margin: 0 auto;
+        padding: 0 clamp(0.75rem, 2vw, 1.5rem);
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding-bottom: clamp(0.75rem, 1.5vw, 1.25rem);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .page-header h1 {
+        font-size: clamp(1.5rem, 2.5vw, 2.25rem);
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+        line-height: 1.2;
+        letter-spacing: -0.5px;
+    }
+
+    /* Panel de tabla ejecutivo mejorado */
+    .data-panel {
+        border-radius: var(--border-radius-xl);
+        overflow: hidden;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        background: var(--card-bg);
+        transition: all 0.3s ease;
+        border: 1px solid var(--border-color);
+    }
+
+    .data-panel:hover {
+        box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+    }
+
+    /* Barra de herramientas mejorada */
+    .toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding: clamp(0.75rem, 1.25vw, 1.25rem);
+        background: var(--hover-bg);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    /* Buscador premium mejorado */
+    .search-form {
+        position: relative;
+        flex-grow: 1;
+        min-width: 200px;
+        max-width: 100%;
+    }
+
+    .search-form .form-control {
+        padding-left: 3rem;
+        padding-right: 1rem;
+        border-radius: 50px;
+        border: 1px solid var(--border-color);
+        height: 46px;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        box-shadow: none;
+        background-color: var(--card-bg);
+        color: var(--text-primary);
+    }
+
+    .search-form .form-control::placeholder {
+        color: var(--text-secondary);
+        opacity: 0.7;
+    }
+
+    .search-form .form-control:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.15);
+    }
+
+    .search-form .btn-search {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        z-index: 4;
+        font-size: 1rem;
+        opacity: 0.7;
+        padding: 0;
+    }
+
+    /* Botón de exportar mejorado */
+    .export-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        background: var(--card-bg);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+        transition: all 0.2s ease;
+        font-size: 0.85rem;
+        font-weight: 500;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+
+    .export-btn:hover {
+        background: var(--hover-bg);
+        border-color: rgba(0,0,0,0.15);
+        transform: translateY(-1px);
+        color: var(--text-primary);
+    }
+
+    /* Tabla ejecutiva mejorada */
+    .table-container {
+        overflow-x: auto;
+        width: 100%;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .table {
+        margin-bottom: 0;
+        font-size: var(--table-font-size);
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        color: var(--text-primary);
+        min-width: 700px;
+    }
+
+    .table thead th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: var(--table-header-size);
+        letter-spacing: 0.5px;
+        background-color: var(--primary-color);
+        color: white;
+        padding: clamp(0.75rem, 1vw, 1rem);
+        vertical-align: middle;
+        position: sticky;
+        left: 0;
+        white-space: nowrap;
+    }
+
+    .table tbody td {
+        padding: clamp(0.75rem, 1vw, 1rem);
+        vertical-align: middle;
+        border-top: 1px solid var(--border-color);
+        background: var(--card-bg);
+        color: var(--text-primary);
+        white-space: nowrap;
+    }
+
+    .table tbody tr:not(:last-child) td {
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .table tbody tr:hover td {
+        background: var(--hover-bg);
+    }
+
+    /* Botones de acción premium mejorados */
+    .action-btns {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .btn-action {
+        width: var(--action-btn-size);
+        height: var(--action-btn-size);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        border-radius: 50%;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        border: none;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    .btn-action.btn-primary {
+        background-color: #3498db;
+    }
+
+    .btn-action.btn-warning {
+        background-color: #ffc107;
+    }
+
+    .btn-action:hover {
+        transform: translateY(-3px) scale(1.1);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        opacity: 0.9;
+    }
+
+    .btn-action i {
+        font-size: 0.9em;
+        color: white;
+    }
+
+    /* Mensaje de tabla vacía mejorado */
+    .empty-table-message {
+        padding: 2rem 1rem;
+        text-align: center;
+        color: var(--text-secondary);
+    }
+
+    .empty-table-message i {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+        color: var(--primary-color);
+        opacity: 0.5;
+    }
+
+    .empty-table-message .empty-title {
+        font-size: 1.1rem;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+
+    .empty-table-message .empty-subtitle {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+
+    /* Vista de tarjetas para móviles */
+    .mobile-cards-view {
+        display: none;
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .cliente-card {
+        background: var(--card-bg);
+        border-radius: var(--border-radius-xl);
+        padding: 1.25rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        border: 1px solid var(--border-color);
+    }
+
+    .cliente-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .cliente-name {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+        font-size: 1.1rem;
+    }
+
+    .cliente-company {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .cliente-details {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .cliente-detail {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .cliente-detail i {
+        color: var(--primary-color);
+        width: 20px;
+        flex-shrink: 0;
+        margin-top: 0.1rem;
+    }
+
+    .cliente-detail-content {
+        flex: 1;
+    }
+
+    .cliente-detail-label {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.1rem;
+    }
+
+    .cliente-detail-value {
+        font-size: 0.95rem;
+        color: var(--text-primary);
+        word-break: break-word;
+    }
+
+    .cliente-card-footer {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        border-top: 1px solid var(--border-color);
+        padding-top: 1rem;
+        margin-top: 0.5rem;
+    }
+
+    /* Responsive para móviles mejorado */
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: stretch;
+            text-align: center;
+        }
+        
+        .toolbar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 1rem;
+        }
+        
+        .search-form {
+            max-width: 100%;
+        }
+        
+        .export-btn {
+            align-self: center;
+        }
+        
+        /* Ocultar tabla y mostrar vista de tarjetas en móviles */
+        .table-container {
+            display: none;
+        }
+        
+        .mobile-cards-view {
+            display: flex;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .clientes-container {
+            padding: 0 0.5rem;
+        }
+        
+        .cliente-card {
+            padding: 1rem;
+        }
+        
+        .action-btns {
+            gap: 0.5rem;
+        }
+        
+        .empty-table-message {
+            padding: 1.5rem 0.75rem;
+        }
+    }
+
+    @media (max-width: 360px) {
+        .page-header h1 {
+            font-size: 1.35rem;
+        }
+        
+        .btn-action {
+            width: 30px;
+            height: 30px;
+        }
+        
+        .btn-action i {
+            font-size: 0.8em;
+        }
+    }
+</style>
+
+<div class="clientes-container">
+    <div class="page-header">
+        <h1>Clientes Cerrados</h1>
+    </div>
+
+    <div class="data-panel">
+        <div class="toolbar">
+            <form method="get" class="search-form">
+                <button type="submit" class="btn-search">
+                    <i class="fas fa-search"></i>
+                </button>
+                <input type="text" name="q" class="form-control" 
+                       placeholder="Buscar clientes..." value="{{ request.GET.q }}">
+            </form>
+            
+            <a href="#" class="export-btn">
+                <i class="fas fa-file-export"></i> Exportar Excel
+            </a>
+        </div>
+
+        <!-- Vista de tabla para escritorio -->
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Empresa</th>
+                        <th>Email</th>
+                        <th>Teléfono</th>
+                        <th>Última Actualización</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cliente in clientes %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'proyecto-detail' cliente.proyecto.pk %}" class="fw-semibold text-decoration-none text-dark">
+                                {{ cliente.nombre_completo }}
+                            </a>
+                        </td>
+                        <td>{{ cliente.empresa|default:"N/A" }}</td>
+                        <td>{{ cliente.email }}</td>
+                        <td>{{ cliente.telefono|default:"N/A" }}</td>
+                        <td>{{ cliente.fecha_actualizacion|date:"d M Y, H:i" }}</td>
+                        <td class="text-center">
+                            <div class="action-btns">
+                                <a href="{% url 'proyecto-detail' cliente.proyecto.pk %}" 
+                                   class="btn-action btn-primary" 
+                                   title="Gestionar Proyecto">
+                                    <i class="fas fa-tasks"></i>
+                                </a>
+                                <a href="{% url 'prospecto-update' cliente.pk %}" 
+                                   class="btn-action btn-warning" 
+                                   title="Editar Cliente">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="empty-table-message">
+                            <i class="fas fa-user-slash"></i>
+                            <div class="empty-title">No se encontraron clientes cerrados</div>
+                            {% if request.GET.q %}
+                                <div class="empty-subtitle">Intenta con otro término de búsqueda</div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Vista de tarjetas para móviles -->
+        <div class="mobile-cards-view">
+            {% for cliente in clientes %}
+            <div class="cliente-card">
+                <div class="cliente-card-header">
+                    <div>
+                        <a href="{% url 'proyecto-detail' cliente.proyecto.pk %}" class="cliente-name text-decoration-none text-dark">
+                            {{ cliente.nombre_completo }}
+                        </a>
+                        <div class="cliente-company">{{ cliente.empresa|default:"Sin empresa" }}</div>
+                    </div>
+                </div>
+                
+                <div class="cliente-details">
+                    <div class="cliente-detail">
+                        <i class="fas fa-envelope"></i>
+                        <div class="cliente-detail-content">
+                            <div class="cliente-detail-label">Email</div>
+                            <div class="cliente-detail-value">{{ cliente.email|default:"-" }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="cliente-detail">
+                        <i class="fas fa-phone"></i>
+                        <div class="cliente-detail-content">
+                            <div class="cliente-detail-label">Teléfono</div>
+                            <div class="cliente-detail-value">{{ cliente.telefono|default:"-" }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="cliente-detail">
+                        <i class="fas fa-calendar-alt"></i>
+                        <div class="cliente-detail-content">
+                            <div class="cliente-detail-label">Última Actualización</div>
+                            <div class="cliente-detail-value">{{ cliente.fecha_actualizacion|date:"d M Y, H:i" }}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="cliente-card-footer">
+                    <div class="action-btns">
+                        <a href="{% url 'proyecto-detail' cliente.proyecto.pk %}" 
+                           class="btn-action btn-primary" 
+                           title="Gestionar Proyecto">
+                            <i class="fas fa-tasks"></i>
+                        </a>
+                        <a href="{% url 'prospecto-update' cliente.pk %}" 
+                           class="btn-action btn-warning" 
+                           title="Editar Cliente">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-table-message">
+                <i class="fas fa-user-slash"></i>
+                <div class="empty-title">No se encontraron clientes cerrados</div>
+                {% if request.GET.q %}
+                    <div class="empty-subtitle">Intenta con otro término de búsqueda</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
