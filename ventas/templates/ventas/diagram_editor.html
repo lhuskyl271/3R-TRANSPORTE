@@ -1,0 +1,511 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if diagrama %}
+        Editando Diagrama: {{ diagrama.titulo }}
+    {% else %}
+        Crear Nuevo Diagrama
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/jointjs/3.7.5/joint.css" />
+
+<style>
+    body {
+        overflow: hidden; /* Evita el scroll de la página principal */
+    }
+    .editor-container {
+        display: flex;
+        height: 85vh; /* Ocupa casi toda la altura de la ventana */
+        gap: 1rem;
+    }
+    .toolbar {
+        flex: 0 0 250px; /* Ancho fijo de la barra de herramientas */
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: var(--border-radius);
+        border: 1px solid #dee2e6;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .toolbar-section {
+        margin-bottom: 15px;
+    }
+    .toolbar h5 {
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }
+    .toolbar .shape, .toolbar .tool {
+        cursor: pointer;
+        padding: 10px;
+        margin-bottom: 10px;
+        border: 1px solid #ccc;
+        background-color: white;
+        text-align: center;
+        border-radius: 5px;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+    }
+    .toolbar .shape:hover, .toolbar .tool:hover {
+        background-color: #e9ecef;
+        transform: translateY(-2px);
+    }
+    .toolbar .shape i, .toolbar .tool i {
+        margin-right: 8px;
+        width: 20px;
+    }
+    .toolbar .tool.active {
+        background-color: #007bff;
+        color: white;
+        border-color: #0056b3;
+    }
+    .paper-container {
+        flex-grow: 1; /* Ocupa el resto del espacio */
+        border: 1px solid #dee2e6;
+        border-radius: var(--border-radius);
+        overflow: auto; /* Permite hacer scroll si el diagrama es grande */
+        position: relative;
+    }
+    #paper {
+        background-color: white;
+        background-image: radial-gradient(#ddd 1px, transparent 1px);
+        background-size: 10px 10px;
+    }
+    .joint-element .body {
+        stroke-width: 2px;
+    }
+    .paper-overlay {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 100;
+        display: flex;
+        gap: 5px;
+    }
+    .paper-overlay button {
+        padding: 5px 10px;
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    .paper-overlay button:hover {
+        background: #f0f0f0;
+    }
+    .joint-element .label {
+        font-size: 14px;
+        font-weight: bold;
+        font-family: Arial, sans-serif;
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h4>
+                {% if diagrama %}
+                    Editando: <input type="text" id="diagram-title" value="{{ diagrama.titulo }}" class="form-control-lg form-control-plaintext d-inline-block w-auto">
+                {% else %}
+                    <input type="text" id="diagram-title" placeholder="Título del Diagrama" class="form-control form-control-lg">
+                {% endif %}
+            </h4>
+            <p class="text-muted mb-0">Proyecto: {{ proyecto.nombre_proyecto }}</p>
+        </div>
+        <div>
+            <a href="{% url 'proyecto-detail' proyecto.pk %}" class="btn btn-secondary"><i class="fas fa-arrow-left me-2"></i>Volver al Proyecto</a>
+            <button id="save-btn" class="btn btn-success"><i class="fas fa-save me-2"></i>Guardar Diagrama</button>
+        </div>
+    </div>
+
+    <div class="editor-container">
+        <div class="toolbar">
+            <div class="toolbar-section">
+                <h5>Herramientas</h5>
+                <div class="tool" data-tool="pointer" id="pointer-tool">
+                    <i class="fas fa-mouse-pointer"></i> Seleccionar
+                </div>
+                <div class="tool" data-tool="link" id="link-tool">
+                    <i class="fas fa-link"></i> Conectar
+                </div>
+                <div class="tool" data-tool="delete" id="delete-tool">
+                    <i class="fas fa-trash"></i> Eliminar
+                </div>
+            </div>
+            
+            <div class="toolbar-section">
+                <h5>Figuras</h5>
+                <div class="shape" data-type="process"><i class="fas fa-square"></i> Proceso</div>
+                <div class="shape" data-type="decision"><i class="fas fa-gem"></i> Decisión</div>
+                <div class="shape" data-type="startend"><i class="fas fa-capsules"></i> Inicio / Fin</div>
+            </div>
+        </div>
+        
+        <div class="paper-container" id="paper-container">
+            <div class="paper-overlay">
+                <button id="zoom-in"><i class="fas fa-search-plus"></i></button>
+                <button id="zoom-out"><i class="fas fa-search-minus"></i></button>
+                <button id="center-content"><i class="fas fa-expand"></i></button>
+            </div>
+            <div id="paper"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.4.1/backbone.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jointjs/3.7.5/joint.js"></script>
+
+<script>
+$(document).ready(function() {
+    const csrfToken = '{{ csrf_token }}';
+    const diagramId = '{{ diagrama.id|default:"" }}';
+    const projectId = '{{ proyecto.id }}';
+    let currentTool = 'pointer';
+
+    // 1. Inicializar el Grafo y el Lienzo (Paper)
+    const namespace = joint.shapes;
+    const graph = new joint.dia.Graph({}, { cellNamespace: namespace });
+    const paper = new joint.dia.Paper({
+        el: document.getElementById('paper'),
+        model: graph,
+        width: 2000,
+        height: 1500,
+        gridSize: 10,
+        drawGrid: false,
+        background: { color: 'rgba(255, 255, 255, 0.9)' },
+        cellViewNamespace: namespace,
+        defaultLink: () => new joint.shapes.standard.Link({
+            attrs: {
+                line: {
+                    stroke: '#34495e',
+                    strokeWidth: 2,
+                    targetMarker: { 
+                        'type': 'path',
+                        'd': 'M 10 -5 0 0 10 5 Z',
+                        'fill': '#34495e',
+                        'stroke': 'none'
+                    }
+                }
+            },
+            router: { name: 'manhattan' },
+            connector: { name: 'rounded' }
+        }),
+        validateConnection: function(cellViewS, magnetS, cellViewT, magnetT, end, linkView) {
+            // No permitir conexiones consigo mismo
+            if (cellViewS === cellViewT) return false;
+            // Solo permitir conexiones a puertos válidos
+            return magnetT && magnetT.getAttribute('port');
+        },
+        // Habilitar la selección de elementos
+        interactive: true,
+        // Permitir que los elementos se puedan mover
+        movable: true,
+        // Permitir que los enlaces se puedan conectar
+        linkPinning: true
+    });
+
+    // 2. Funciones para añadir figuras con puertos para conexiones
+    function addProcess(x, y) {
+        const rect = new joint.shapes.standard.Rectangle({
+            position: { x: x, y: y },
+            size: { width: 120, height: 60 },
+            attrs: {
+                body: { 
+                    fill: '#3498db', 
+                    rx: 5, 
+                    ry: 5, 
+                    stroke: '#2980b9',
+                    strokeWidth: 2
+                },
+                label: { 
+                    text: 'Proceso', 
+                    fill: 'white',
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                    fontFamily: 'Arial'
+                }
+            },
+            ports: {
+                groups: {
+                    'in': {
+                        position: { name: 'left' },
+                        attrs: {
+                            circle: {
+                                r: 5,
+                                magnet: true,
+                                stroke: '#3498db',
+                                strokeWidth: 2,
+                                fill: 'white'
+                            }
+                        }
+                    },
+                    'out': {
+                        position: { name: 'right' },
+                        attrs: {
+                            circle: {
+                                r: 5,
+                                magnet: true,
+                                stroke: '#3498db',
+                                strokeWidth: 2,
+                                fill: 'white'
+                            }
+                        }
+                    }
+                },
+                items: [
+                    { group: 'in', id: 'in1' },
+                    { group: 'in', id: 'in2' },
+                    { group: 'out', id: 'out1' },
+                    { group: 'out', id: 'out2' }
+                ]
+            }
+        });
+        rect.addTo(graph);
+        return rect;
+    }
+
+    function addDecision(x, y) {
+        const rhombus = new joint.shapes.standard.Polygon({
+            position: { x: x, y: y },
+            size: { width: 120, height: 80 },
+            attrs: {
+                body: {
+                    refPoints: '50,0 100,50 50,100 0,50',
+                    fill: '#f1c40f', 
+                    stroke: '#f39c12',
+                    strokeWidth: 2
+                },
+                label: { 
+                    text: '¿Decisión?', 
+                    fill: 'black',
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                    fontFamily: 'Arial'
+                }
+            },
+            ports: {
+                groups: {
+                    'in': {
+                        position: { name: 'left' },
+                        attrs: {
+                            circle: {
+                                r: 5,
+                                magnet: true,
+                                stroke: '#f1c40f',
+                                strokeWidth: 2,
+                                fill: 'white'
+                            }
+                        }
+                    },
+                    'out': {
+                        position: { name: 'right' },
+                        attrs: {
+                            circle: {
+                                r: 5,
+                                magnet: true,
+                                stroke: '#f1c40f',
+                                strokeWidth: 2,
+                                fill: 'white'
+                            }
+                        }
+                    }
+                },
+                items: [
+                    { group: 'in', id: 'in1' },
+                    { group: 'in', id: 'in2' },
+                    { group: 'out', id: 'out1' },
+                    { group: 'out', id: 'out2' }
+                ]
+            }
+        });
+        rhombus.addTo(graph);
+        return rhombus;
+    }
+
+    function addStartEnd(x, y) {
+        const ellipse = new joint.shapes.standard.Ellipse({
+            position: { x: x, y: y },
+            size: { width: 120, height: 50 },
+            attrs: {
+                body: { 
+                    fill: '#2ecc71', 
+                    stroke: '#27ae60',
+                    strokeWidth: 2
+                },
+                label: { 
+                    text: 'Inicio', 
+                    fill: 'white',
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                    fontFamily: 'Arial'
+                }
+            },
+            ports: {
+                groups: {
+                    'out': {
+                        position: { name: 'right' },
+                        attrs: {
+                            circle: {
+                                r: 5,
+                                magnet: true,
+                                stroke: '#2ecc71',
+                                strokeWidth: 2,
+                                fill: 'white'
+                            }
+                        }
+                    }
+                },
+                items: [
+                    { group: 'out', id: 'out1' }
+                ]
+            }
+        });
+        ellipse.addTo(graph);
+        return ellipse;
+    }
+
+    // 3. Eventos de la barra de herramientas
+    $('.toolbar .shape').on('click', function() {
+        const type = $(this).data('type');
+        const center = paper.localToPagePoint(paper.getArea().center());
+        if (type === 'process') addProcess(center.x - 60, center.y - 30);
+        if (type === 'decision') addDecision(center.x - 60, center.y - 40);
+        if (type === 'startend') addStartEnd(center.x - 60, center.y - 25);
+    });
+
+    // 4. Cambiar entre herramientas
+    $('.toolbar .tool').on('click', function() {
+        // Desactivar todas las herramientas
+        $('.toolbar .tool').removeClass('active');
+        // Activar la herramienta seleccionada
+        $(this).addClass('active');
+        
+        currentTool = $(this).data('tool');
+        
+        // Configurar el papel según la herramienta seleccionada
+        switch(currentTool) {
+            case 'pointer':
+                paper.options.interactive = true;
+                paper.options.movable = true;
+                paper.options.linkPinning = false;
+                break;
+            case 'link':
+                paper.options.interactive = true;
+                paper.options.movable = false;
+                paper.options.linkPinning = true;
+                break;
+            case 'delete':
+                paper.options.interactive = true;
+                paper.options.movable = false;
+                paper.options.linkPinning = false;
+                break;
+        }
+    });
+
+    // 5. Permitir editar texto al hacer doble clic
+    paper.on('element:pointerdblclick', (elementView, evt) => {
+        const currentText = elementView.model.attr('label/text');
+        const newText = prompt('Editar texto:', currentText);
+        if (newText !== null) {
+            elementView.model.attr('label/text', newText);
+        }
+    });
+
+    // 6. Eliminar elementos con la herramienta de eliminación
+    paper.on('element:pointerclick', (elementView, evt) => {
+        if (currentTool === 'delete') {
+            if (confirm('¿Estás seguro de que quieres eliminar este elemento?')) {
+                elementView.model.remove();
+            }
+        }
+    });
+
+    // 7. Eliminar enlaces con la herramienta de eliminación
+    paper.on('link:pointerclick', (linkView, evt) => {
+        if (currentTool === 'delete') {
+            if (confirm('¿Estás seguro de que quieres eliminar esta conexión?')) {
+                linkView.model.remove();
+            }
+        }
+    });
+
+    // 8. Funciones de zoom
+    $('#zoom-in').on('click', function() {
+        paper.scale(paper.scale().sx + 0.1, paper.scale().sy + 0.1);
+    });
+
+    $('#zoom-out').on('click', function() {
+        paper.scale(paper.scale().sx - 0.1, paper.scale().sy - 0.1);
+    });
+
+    $('#center-content').on('click', function() {
+        paper.scale(1, 1);
+        paper.translate(0, 0);
+    });
+
+    // 9. Cargar datos del diagrama si estamos en modo edición
+    if (diagramId) {
+        fetch(`/api/diagrama/${diagramId}/`)
+            .then(response => response.json())
+            .then(data => {
+                graph.fromJSON(data.codigo);
+            })
+            .catch(error => console.error('Error al cargar el diagrama:', error));
+    }
+
+    // 10. Lógica de guardado
+    $('#save-btn').on('click', function() {
+        const title = $('#diagram-title').val();
+        if (!title.trim()) {
+            alert('Por favor, introduce un título para el diagrama.');
+            return;
+        }
+
+        // Convertir el lienzo a SVG
+        paper.toSVG(svgString => {
+            const dataToSave = {
+                id: diagramId || null,
+                titulo: title,
+                codigo: graph.toJSON(), // Guardamos la estructura del grafo en JSON
+                svg: svgString, // Guardamos la representación visual en SVG
+            };
+
+            fetch(`/api/proyecto/${projectId}/guardar-diagrama/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify(dataToSave)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('¡Diagrama guardado con éxito!');
+                    // Redirigir a la página de edición con el nuevo ID
+                    if (!diagramId) {
+                        window.location.href = `/diagrama/${data.diagrama_id}/editar/`;
+                    }
+                } else {
+                    alert('Error al guardar el diagrama.');
+                }
+            })
+            .catch(error => console.error('Error de red:', error));
+        }, {
+            preserveDimensions: true,
+            convertImagesToDataUris: true
+        });
+    });
+
+    // Activar la herramienta de selección por defecto
+    $('#pointer-tool').addClass('active');
+});
+</script>
+{% endblock %}

@@ -5,6 +5,8 @@ from pathlib import Path
 import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+ENVIRONMENT = os.environ.get('ENVIRONMENT', 'local')  # 'local' o 'render'
+
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key')
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
@@ -56,11 +58,23 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'mi_crm.wsgi.application'
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL')
-    )
+if ENVIRONMENT == 'local':
+    DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'mi_crm_db',
+        'USER': 'admin',   # el dueño que asignaste
+        'PASSWORD': '1234',  # la contraseña que pusiste al crear el usuario
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
 }
+else:  # Render / producción
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.environ.get('DATABASE_URL')
+        )
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},

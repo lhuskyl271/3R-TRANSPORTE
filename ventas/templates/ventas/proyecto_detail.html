@@ -222,33 +222,36 @@
                         
                         <div class="tab-pane fade" id="diagramas">
                             <h4><i class="fas fa-project-diagram me-2 text-primary"></i>Herramienta de Diagramas</h4>
-                            <p class="text-muted">Crea y gestiona diagramas de flujo o de arquitectura usando la sintaxis de Mermaid.js.</p>
+                            <p class="text-muted">Crea y gestiona diagramas de flujo de forma gráfica.</p>
                             <hr>
-                    
-                            <div class="card card-body bg-light mb-4">
-                                <h5>Crear Nuevo Diagrama</h5>
-                                <div class="mb-2">
-                                    <label for="new-diagram-title" class="form-label">Título del Diagrama</label>
-                                    <input type="text" id="new-diagram-title" class="form-control" placeholder="Ej: Flujo de Aprobación">
-                                </div>
-                                <div class="mb-2">
-                                    <label for="new-diagram-code" class="form-label">Código Mermaid.js</label>
-                                    <textarea id="new-diagram-code" rows="6" class="form-control" placeholder="graph TD; A-->B;"></textarea>
-                                </div>
-                                <button id="save-diagram-btn" class="btn btn-success mt-2">Guardar Nuevo Diagrama</button>
+
+                            <div class="mb-4">
+                                <a href="{% url 'diagrama-crear' proyecto.pk %}" class="btn btn-success">
+                                    <i class="fas fa-plus me-2"></i>Crear Nuevo Diagrama Gráfico
+                                </a>
                             </div>
-                    
+
                             <h5>Diagramas Guardados</h5>
                             <div id="diagrams-list">
                                 {% for diagrama in proyecto.diagramas.all %}
-                                    <div class="card mb-2">
+                                    <div class="card mb-3">
                                         <div class="card-header d-flex justify-content-between align-items-center">
                                             <strong>{{ diagrama.titulo }}</strong>
                                             <div>
+                                                <a href="{% url 'diagrama-editar' diagrama.pk %}" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-pencil-alt me-1"></i> Editar
+                                                </a>
                                                 <a href="{% url 'descargar-diagrama-pdf' diagrama.pk %}" class="btn btn-sm btn-info" target="_blank" title="Descargar como PDF">
                                                     <i class="fas fa-file-pdf me-1"></i> PDF
                                                 </a>
                                             </div>
+                                        </div>
+                                        <div class="card-body text-center" style="background-color: #f8f9fa;">
+                                            {% if diagrama.svg_representation %}
+                                                {{ diagrama.svg_representation|safe }}
+                                            {% else %}
+                                                <p class="text-muted">No hay vista previa disponible.</p>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 {% empty %}

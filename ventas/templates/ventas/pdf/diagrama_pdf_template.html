@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Diagrama: {{ diagrama.titulo }}</title>
+    <style>
+        body { font-family: sans-serif; }
+        h1 { color: #333; }
+        .diagram-container {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>{{ diagrama.titulo }}</h1>
+    <p><strong>Proyecto:</strong> {{ diagrama.proyecto.nombre_proyecto }}</p>
+    <p><strong>Última actualización:</strong> {{ diagrama.fecha_actualizacion|date:"d M Y, H:i" }}</p>
+
+    <div class="diagram-container">
+        {{ diagrama.svg_representation|safe }}
+    </div>
+</body>
+</html>

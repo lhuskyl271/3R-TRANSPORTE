@@ -14,7 +14,7 @@ from django.urls import reverse_lazy, reverse
 from .models import (
     Prospecto, Interaccion, Recordatorio, Etiqueta, Trabajador, 
     ProspectoTrabajador, ArchivoAdjunto, Proyecto, Entregable, 
-    EquipoProyecto, SeguimientoProyecto,KanbanColumna, KanbanTarea
+    EquipoProyecto, SeguimientoProyecto,KanbanColumna, KanbanTarea,DiagramaProyecto 
 )
 from .forms import (
     ProspectoForm, InteraccionForm, RecordatorioForm, TrabajadorForm, 
@@ -34,6 +34,7 @@ import pytz
 from django.core.paginator import Paginator
 from django.db.models import Subquery, OuterRef, Case, When, F, IntegerField
 from django.http import JsonResponse
+from django.views.generic import TemplateView #
 
 
 # ==============================================================================
@@ -972,6 +973,85 @@ def descargar_diagrama_pdf(request, diagrama_pk):
         
     diagrama = get_object_or_404(DiagramaProyecto, pk=diagrama_pk)
     
+    html_string = render_to_string('ventas/pdf/diagrama_pdf_template.html', {
+        'diagrama': diagrama
+    })
+    
+    html = HTML(string=html_string)
+    pdf = html.write_pdf()
+    
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="diagrama_{diagrama.titulo}.pdf"'
+    
+    return response
+
+# ✅ NUEVA VISTA: Para renderizar la página del editor de diagramas
+class DiagramaEditorView(LoginRequiredMixin, TemplateView):
+    template_name = 'ventas/diagram_editor.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if 'pk' in kwargs:
+            # Estamos editando un diagrama existente
+            diagrama = get_object_or_404(DiagramaProyecto, pk=kwargs['pk'])
+            context['diagrama'] = diagrama
+            context['proyecto'] = diagrama.proyecto
+        elif 'proyecto_pk' in kwargs:
+            # Estamos creando un nuevo diagrama para un proyecto
+            proyecto = get_object_or_404(Proyecto, pk=kwargs['proyecto_pk'])
+            context['proyecto'] = proyecto
+        return context
+
+# ✅ NUEVA VISTA API: Para devolver los datos JSON de un diagrama
+@login_required
+def get_diagrama_api(request, diagrama_pk):
+    diagrama = get_object_or_404(DiagramaProyecto, pk=diagrama_pk)
+    # Aquí podrías añadir una comprobación de permisos
+    return JsonResponse({
+        'id': diagrama.id,
+        'titulo': diagrama.titulo,
+        'codigo': json.loads(diagrama.codigo) # Devolvemos el JSON como un objeto
+    })
+
+# ✏️ VISTA MODIFICADA: Para guardar el JSON y el SVG del diagrama
+@login_required
+def guardar_diagrama_api(request, proyecto_pk):
+    """API para crear o actualizar un diagrama desde el editor JointJS."""
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_pk)
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        diagrama_id = data.get('id')
+        titulo = data.get('titulo', 'Diagrama sin título')
+        
+        # El 'codigo' ahora es el JSON del grafo de JointJS
+        codigo_json = json.dumps(data.get('codigo', {})) 
+        
+        # El SVG se envía desde el cliente
+        svg_code = data.get('svg', '')
+
+        # Si se proporciona un ID, se actualiza. Si no, se crea uno nuevo.
+        diagrama, created = DiagramaProyecto.objects.update_or_create(
+            id=diagrama_id,
+            defaults={
+                'proyecto': proyecto, 
+                'titulo': titulo, 
+                'codigo': codigo_json,
+                'svg_representation': svg_code # Guardamos el SVG
+            }
+        )
+        return JsonResponse({'status': 'success', 'diagrama_id': diagrama.id})
+    return JsonResponse({'status': 'error'}, status=400)
+
+# ✏️ VISTA MODIFICADA: Para usar el SVG en la generación del PDF
+@login_required
+def descargar_diagrama_pdf(request, diagrama_pk):
+    """Genera un PDF a partir del SVG guardado de un diagrama."""
+    if HTML is None:
+        return HttpResponse("WeasyPrint no está instalado.", status=501)
+        
+    diagrama = get_object_or_404(DiagramaProyecto, pk=diagrama_pk)
+    
+    # Renderizamos una plantilla que simplemente incrusta el SVG
     html_string = render_to_string('ventas/pdf/diagrama_pdf_template.html', {
         'diagrama': diagrama
     })

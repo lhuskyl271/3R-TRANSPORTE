@@ -44,6 +44,9 @@ from .views import (
     EntregableUpdateView, EntregableDeleteView,
     DesasignarMiembroEquipoView,
     SeguimientoProyectoUpdateView, SeguimientoProyectoDeleteView,guardar_diagrama_api,
+    descargar_diagrama_pdf,DiagramaEditorView,
+    get_diagrama_api,
+    guardar_diagrama_api,
     descargar_diagrama_pdf,
 )
 
@@ -124,6 +127,18 @@ urlpatterns = [
     path('seguimiento/<int:pk>/eliminar/', SeguimientoProyectoDeleteView.as_view(), name='seguimiento-delete'),
     
      # --- URLs para la Herramienta de Diagramas ---
+    path('api/proyecto/<int:proyecto_pk>/guardar-diagrama/', guardar_diagrama_api, name='api-guardar-diagrama'),
+    path('diagrama/<int:diagrama_pk>/descargar-pdf/', descargar_diagrama_pdf, name='descargar-diagrama-pdf'),
+    # ✅ NUEVA RUTA: Para abrir el editor gráfico y crear un nuevo diagrama
+    path('proyecto/<int:proyecto_pk>/diagrama/crear/', DiagramaEditorView.as_view(), name='diagrama-crear'),
+    
+    # ✅ NUEVA RUTA: Para abrir el editor gráfico y editar un diagrama existente
+    path('diagrama/<int:pk>/editar/', DiagramaEditorView.as_view(), name='diagrama-editar'),
+    
+    # ✅ NUEVA RUTA API: Para obtener los datos JSON de un diagrama
+    path('api/diagrama/<int:diagrama_pk>/', get_diagrama_api, name='api-get-diagrama'),
+
+    # Se mantiene la misma URL para guardar, pero su lógica cambiará
     path('api/proyecto/<int:proyecto_pk>/guardar-diagrama/', guardar_diagrama_api, name='api-guardar-diagrama'),
     path('diagrama/<int:diagrama_pk>/descargar-pdf/', descargar_diagrama_pdf, name='descargar-diagrama-pdf'),
 ]

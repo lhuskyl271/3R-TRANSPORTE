@@ -354,10 +354,20 @@ class KanbanTarea(models.Model):
         return self.titulo
     
 class DiagramaProyecto(models.Model):
-    """Guarda el código de un diagrama (ej. Mermaid.js) asociado a un proyecto."""
+    """Guarda el código de un diagrama (ej. JointJS JSON) y su SVG asociado."""
     proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='diagramas')
     titulo = models.CharField(max_length=200)
-    codigo = models.TextField(help_text="Código del diagrama, por ejemplo, en sintaxis Mermaid.js")
+    
+    # El campo 'codigo' ahora almacenará el JSON de JointJS
+    codigo = models.TextField(help_text="Código del diagrama en formato JSON (JointJS)")
+    
+    # ✅ NUEVO CAMPO: Para almacenar el SVG del diagrama para exportación
+    svg_representation = models.TextField(
+        blank=True, 
+        verbose_name="Representación SVG",
+        help_text="El código SVG del diagrama para la exportación a PDF."
+    )
+    
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -365,4 +375,3 @@ class DiagramaProyecto(models.Model):
 
     def __str__(self):
         return f"Diagrama '{self.titulo}' para {self.proyecto.nombre_proyecto}"
-
