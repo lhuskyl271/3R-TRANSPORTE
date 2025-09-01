@@ -1,7 +1,7 @@
 from django import forms
 from .models import (
     Prospecto, Interaccion, Recordatorio, Trabajador, ProspectoTrabajador, 
-    ArchivoAdjunto, Proyecto, Entregable, EquipoProyecto, SeguimientoProyecto
+    ArchivoAdjunto, Proyecto, Entregable, EquipoProyecto, SeguimientoProyecto,KanbanTarea  
 )
 
 class ProspectoForm(forms.ModelForm):
