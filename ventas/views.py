@@ -762,39 +762,6 @@ class ProyectoFlujoTrabajoView(LoginRequiredMixin, DetailView):
         context['kanban_data_json'] = json.dumps(boards)
         return context
 
-# --- Vistas de API para manejar acciones del Kanban ---
-
-@login_required
-def crear_columna_api(request, proyecto_pk):
-    if request.method == 'POST':
-        data = json.loads(request.body)
-        titulo = data.get('titulo')
-        proyecto = get_object_or_404(Proyecto, pk=proyecto_pk)
-        
-        if titulo:
-            # Creamos la nueva columna con un orden al final
-            ultima_columna = proyecto.kanban_columnas.order_by('-orden').first()
-            nuevo_orden = (ultima_columna.orden + 1) if ultima_columna else 0
-            
-            columna = KanbanColumna.objects.create(proyecto=proyecto, titulo=titulo, orden=nuevo_orden)
-            return JsonResponse({'status': 'success', 'id': columna.id, 'titulo': columna.titulo})
-    return JsonResponse({'status': 'error'}, status=400)
-
-@login_required
-def crear_tarea_api(request, columna_pk):
-    if request.method == 'POST':
-        data = json.loads(request.body)
-        titulo = data.get('titulo')
-        columna = get_object_or_404(KanbanColumna, pk=columna_pk)
-        
-        if titulo:
-            # Creamos la nueva tarea con un orden al final de la columna
-            ultima_tarea = columna.tareas.order_by('-orden').first()
-            nuevo_orden = (ultima_tarea.orden + 1) if ultima_tarea else 0
-
-            tarea = KanbanTarea.objects.create(columna=columna, titulo=titulo, orden=nuevo_orden)
-            return JsonResponse({'status': 'success', 'id': tarea.id, 'titulo': tarea.titulo})
-    return JsonResponse({'status': 'error'}, status=400)
 
 @login_required
 def mover_tarea_api(request):
@@ -919,3 +886,101 @@ def mover_tarea_api(request):
             return JsonResponse({'status': 'error', 'message': 'Tarea o columna no encontrada'}, status=404)
             
     return JsonResponse({'status': 'error'}, status=400)
+
+class EntregableUpdateView(LoginRequiredMixin, UpdateView):
+    """Actualiza un entregable existente."""
+    model = Entregable
+    form_class = EntregableForm
+    template_name = 'ventas/snippets/entregable_form.html' # Un template parcial para el modal
+
+    def get_success_url(self):
+        messages.success(self.request, f"Entregable '{self.object.nombre}' actualizado.")
+        # Redirige de vuelta al detalle del proyecto
+        return reverse('prospecto-detail', kwargs={'pk': self.object.proyecto.prospecto.pk})
+
+class EntregableDeleteView(LoginRequiredMixin, DeleteView):
+    """Elimina un entregable."""
+    model = Entregable
+    template_name = 'ventas/snippets/entregable_confirm_delete.html' # Parcial para el modal
+
+    def get_success_url(self):
+        messages.success(self.request, f"Entregable '{self.object.nombre}' eliminado.")
+        return reverse('prospecto-detail', kwargs={'pk': self.object.proyecto.prospecto.pk})
+    
+class DesasignarMiembroEquipoView(LoginRequiredMixin, DeleteView):
+    """Elimina la asignación de un trabajador de un proyecto."""
+    model = EquipoProyecto
+    template_name = 'ventas/snippets/miembro_confirm_delete.html'
+
+    def get_success_url(self):
+        messages.info(self.request, f"Se ha quitado a '{self.object.trabajador.nombre}' del equipo.")
+        return reverse('prospecto-detail', kwargs={'pk': self.object.proyecto.prospecto.pk})
+
+class SeguimientoProyectoUpdateView(LoginRequiredMixin, UpdateView):
+    """Actualiza una nota de seguimiento."""
+    model = SeguimientoProyecto
+    form_class = SeguimientoProyectoForm
+    template_name = 'ventas/snippets/seguimiento_form.html'
+
+    def get_success_url(self):
+        messages.success(self.request, "La nota de seguimiento ha sido actualizada.")
+        return reverse('prospecto-detail', kwargs={'pk': self.object.proyecto.prospecto.pk})
+
+class SeguimientoProyectoDeleteView(LoginRequiredMixin, DeleteView):
+    """Elimina una nota de seguimiento."""
+    model = SeguimientoProyecto
+    template_name = 'ventas/snippets/seguimiento_confirm_delete.html'
+
+    def get_success_url(self):
+        messages.success(self.request, "La nota de seguimiento ha sido eliminada.")
+        return reverse('prospecto-detail', kwargs={'pk': self.object.proyecto.prospecto.pk})
+    
+    
+@login_required
+def guardar_diagrama_api(request, proyecto_pk):
+    """API para crear o actualizar un diagrama vía AJAX."""
+    proyecto = get_object_or_404(Proyecto, pk=proyecto_pk)
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        diagrama_id = data.get('id')
+        titulo = data.get('titulo', 'Diagrama sin título')
+        codigo = data.get('codigo', '')
+
+        # Si se proporciona un ID, se actualiza. Si no, se crea uno nuevo.
+        diagrama, created = DiagramaProyecto.objects.update_or_create(
+            id=diagrama_id,
+            defaults={'proyecto': proyecto, 'titulo': titulo, 'codigo': codigo}
+        )
+        return JsonResponse({'status': 'success', 'diagrama_id': diagrama.id})
+    return JsonResponse({'status': 'error'}, status=400)
+
+
+from django.http import JsonResponse, HttpResponse
+from django.template.loader import render_to_string
+from .models import DiagramaProyecto
+import json
+# Importar WeasyPrint si no está ya
+try:
+    from weasyprint import HTML
+except ImportError:
+    HTML = None
+
+@login_required
+def descargar_diagrama_pdf(request, diagrama_pk):
+    """Genera un PDF a partir del código de un diagrama usando WeasyPrint."""
+    if HTML is None:
+        return HttpResponse("WeasyPrint no está instalado.", status=501)
+        
+    diagrama = get_object_or_404(DiagramaProyecto, pk=diagrama_pk)
+    
+    html_string = render_to_string('ventas/pdf/diagrama_pdf_template.html', {
+        'diagrama': diagrama
+    })
+    
+    html = HTML(string=html_string)
+    pdf = html.write_pdf()
+    
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="diagrama_{diagrama.titulo}.pdf"'
+    
+    return response

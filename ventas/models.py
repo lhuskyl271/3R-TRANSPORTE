@@ -352,4 +352,17 @@ class KanbanTarea(models.Model):
 
     def __str__(self):
         return self.titulo
+    
+class DiagramaProyecto(models.Model):
+    """Guarda el código de un diagrama (ej. Mermaid.js) asociado a un proyecto."""
+    proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='diagramas')
+    titulo = models.CharField(max_length=200)
+    codigo = models.TextField(help_text="Código del diagrama, por ejemplo, en sintaxis Mermaid.js")
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-fecha_actualizacion']
+
+    def __str__(self):
+        return f"Diagrama '{self.titulo}' para {self.proyecto.nombre_proyecto}"
 

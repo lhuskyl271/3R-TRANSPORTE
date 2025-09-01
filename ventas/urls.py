@@ -41,6 +41,10 @@ from .views import (
     eliminar_columna_api,
     actualizar_tarea_api,
     eliminar_tarea_api,
+    EntregableUpdateView, EntregableDeleteView,
+    DesasignarMiembroEquipoView,
+    SeguimientoProyectoUpdateView, SeguimientoProyectoDeleteView,guardar_diagrama_api,
+    descargar_diagrama_pdf,
 )
 
 urlpatterns = [
@@ -107,5 +111,19 @@ urlpatterns = [
     path('api/columna/<int:columna_pk>/eliminar/', eliminar_columna_api, name='api-eliminar-columna'),
     path('api/tarea/<int:tarea_pk>/actualizar/', actualizar_tarea_api, name='api-actualizar-tarea'),
     path('api/tarea/<int:tarea_pk>/eliminar/', eliminar_tarea_api, name='api-eliminar-tarea'),
+    
+     # --- URLs para CRUD de Entregables ---
+    path('entregable/<int:pk>/editar/', EntregableUpdateView.as_view(), name='entregable-update'),
+    path('entregable/<int:pk>/eliminar/', EntregableDeleteView.as_view(), name='entregable-delete'),
+    
+    # --- URL para eliminar miembro de equipo ---
+    path('equipoproyecto/<int:pk>/eliminar/', DesasignarMiembroEquipoView.as_view(), name='desasignar-miembro'),
 
+    # --- URLs para CRUD de Seguimiento ---
+    path('seguimiento/<int:pk>/editar/', SeguimientoProyectoUpdateView.as_view(), name='seguimiento-update'),
+    path('seguimiento/<int:pk>/eliminar/', SeguimientoProyectoDeleteView.as_view(), name='seguimiento-delete'),
+    
+     # --- URLs para la Herramienta de Diagramas ---
+    path('api/proyecto/<int:proyecto_pk>/guardar-diagrama/', guardar_diagrama_api, name='api-guardar-diagrama'),
+    path('diagrama/<int:diagrama_pk>/descargar-pdf/', descargar_diagrama_pdf, name='descargar-diagrama-pdf'),
 ]
