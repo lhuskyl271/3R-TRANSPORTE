@@ -817,7 +817,6 @@ def actualizar_columna_api(request, columna_pk):
 @login_required
 def eliminar_columna_api(request, columna_pk):
     columna = get_object_or_404(KanbanColumna, pk=columna_pk)
-    # Aquí puedes añadir una comprobación de permisos si es necesario
     if request.method == 'POST': # Usamos POST para la simplicidad del frontend
         columna.delete() # Gracias a on_delete=CASCADE, las tareas se borrarán también
         return JsonResponse({'status': 'success'})
