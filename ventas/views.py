@@ -19,10 +19,11 @@ from .models import (
 from .forms import (
     ProspectoForm, InteraccionForm, RecordatorioForm, TrabajadorForm, 
     ProspectoTrabajadorForm, ProspectoTrabajadorUpdateForm, ArchivoAdjuntoForm,
-    ProyectoUpdateForm, AsignarMiembroEquipoForm, EntregableForm, SeguimientoProyectoForm # <-- Nuevos
+    ProyectoUpdateForm, AsignarMiembroEquipoForm, EntregableForm, SeguimientoProyectoForm
 )
 from django.db.models import Count, Q, Avg
-from django.http import HttpResponseForbidden, HttpResponse
+# ✅ SE AÑADE HttpResponseRedirect PARA MANEJAR REDIRECTS CON #HASH
+from django.http import HttpResponseForbidden, HttpResponse, JsonResponse, HttpResponseRedirect
 from openpyxl import Workbook
 from django.contrib import messages
 from django.db.models.functions import ExtractDay, Now
@@ -33,7 +34,6 @@ from datetime import timedelta
 import pytz 
 from django.core.paginator import Paginator
 from django.db.models import Subquery, OuterRef, Case, When, F, IntegerField
-from django.http import JsonResponse
 
 
 # ==============================================================================
@@ -206,9 +206,8 @@ class ProspectoDetailView(LoginRequiredMixin, OwnerRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        prospecto = self.get_object() # <-- Importante obtener el objeto prospecto
+        prospecto = self.get_object() 
 
-        # --- Lógica estándar que ya tenías ---
         context['interaccion_form'] = InteraccionForm()
         context['recordatorio_form'] = RecordatorioForm()
         context['trabajador_form'] = ProspectoTrabajadorForm()
@@ -222,23 +221,18 @@ class ProspectoDetailView(LoginRequiredMixin, OwnerRequiredMixin, DetailView):
         context['interacciones'] = prospecto.interacciones.all().order_by('-fecha')
         context['recordatorios'] = prospecto.recordatorios.all().order_by('completado', 'fecha_recordatorio')
 
-        # --- ✅ LÓGICA FALTANTE PARA GESTIÓN DE PROYECTO ---
-        # Si el prospecto es un cliente ganado, obtenemos o creamos su proyecto.
         if prospecto.estado == Prospecto.Estado.GANADO:
             proyecto, created = Proyecto.objects.get_or_create(prospecto=prospecto)
             if created and not proyecto.nombre_proyecto:
-                # Si se acaba de crear, le damos un nombre por defecto
                 proyecto.nombre_proyecto = f"Proyecto para {prospecto.empresa or prospecto.nombre_completo}"
                 proyecto.save()
 
-            # Se añade el proyecto y los formularios al contexto
             context['proyecto'] = proyecto
             context['proyecto_form'] = ProyectoUpdateForm(instance=proyecto)
             context['entregable_form'] = EntregableForm()
             context['seguimiento_form'] = SeguimientoProyectoForm()
             context['asignar_miembro_form'] = AsignarMiembroEquipoForm()
             
-            # Se añaden los datos relacionados al proyecto
             context['equipo_proyecto'] = proyecto.equipoproyecto_set.all().select_related('trabajador')
             context['entregables'] = proyecto.entregables.all()
             context['seguimientos'] = proyecto.seguimientos.all().select_related('creado_por')
@@ -437,7 +431,6 @@ def export_prospectos_excel(request):
             ", ".join([t.nombre for t in prospecto.trabajadores.all()]),
             ", ".join([e.nombre for e in prospecto.etiquetas.all()]),
             prospecto.asignado_a.username if prospecto.asignado_a else '',
-            # Se cambió 'fecha_creation' por 'fecha_creacion'
             prospecto.fecha_creacion.strftime('%Y-%m-%d %H:%M') if prospecto.fecha_creacion else ''
         ]
         for col_num, cell_value in enumerate(row_data, 1):
@@ -461,10 +454,6 @@ def export_prospectos_excel(request):
 
 @login_required
 def add_archivo(request, prospecto_pk):
-    """
-    Gestiona la subida de un archivo a S3 usando Boto3 directamente y lo asocia
-    con un prospecto específico. El nombre del archivo se toma automáticamente.
-    """
     prospecto = get_object_or_404(Prospecto, pk=prospecto_pk)
     if request.method != 'POST':
         return HttpResponse("This view only accepts POST requests.", status=405)
@@ -473,11 +462,6 @@ def add_archivo(request, prospecto_pk):
     if form.is_valid():
         uploaded_file = form.cleaned_data['archivo']
         titulo_archivo = uploaded_file.name
-
-        # --- CORRECCIÓN IMPORTANTE ---
-        # Construimos la ruta RELATIVA, SIN el prefijo 'media/'.
-        # Django-storages lo añadirá automáticamente al generar la URL.
-        # ej: prospectos/7/documento_propuesta.pdf
         s3_key = f"prospectos/{prospecto.pk}/{titulo_archivo}"
 
         try:
@@ -487,31 +471,23 @@ def add_archivo(request, prospecto_pk):
                 aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
                 region_name=settings.AWS_S3_REGION_NAME
             )
-
-            # La ruta de subida necesita el prefijo 'media/' porque Boto3 no lo conoce.
             full_s3_path = f"{settings.AWS_LOCATION}/{s3_key}"
-
             s3_client.upload_fileobj(
                 uploaded_file,
                 settings.AWS_STORAGE_BUCKET_NAME,
                 full_s3_path
             )
-            
-            # Guardamos en la base de datos la ruta SIN el prefijo 'media/'.
             archivo_adjunto = ArchivoAdjunto(
                 prospecto=prospecto,
                 nombre=titulo_archivo,
-                archivo=s3_key # <-- Se guarda la ruta relativa
+                archivo=s3_key
             )
             archivo_adjunto.save()
-
             messages.success(request, f"Archivo '{titulo_archivo}' subido exitosamente.")
-
         except (BotoCoreError, NoCredentialsError) as e:
             messages.error(request, f"Error de configuración o conexión con S3: {e}")
         except Exception as e:
             messages.error(request, f"Ocurrió un error inesperado al subir el archivo: {e}")
-
     else:
         error_string = " ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()])
         messages.error(request, f"Error en el formulario. Detalles: {error_string}")
@@ -520,9 +496,6 @@ def add_archivo(request, prospecto_pk):
 
 @login_required
 def delete_archivo(request, pk):
-    """
-    Elimina un archivo adjunto tanto de S3 (usando Boto3) como de la base de datos.
-    """
     archivo = get_object_or_404(ArchivoAdjunto, pk=pk)
     
     if archivo.prospecto.asignado_a != request.user and not request.user.is_superuser:
@@ -531,9 +504,6 @@ def delete_archivo(request, pk):
     
     prospecto_pk = archivo.prospecto.pk
     file_name = archivo.nombre
-    
-    # --- CORRECCIÓN IMPORTANTE ---
-    # La ruta completa en S3 incluye el prefijo 'media/'
     full_s3_path = archivo.archivo.name
 
     try:
@@ -543,16 +513,12 @@ def delete_archivo(request, pk):
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
             region_name=settings.AWS_S3_REGION_NAME
         )
-        
         s3_client.delete_object(
             Bucket=settings.AWS_STORAGE_BUCKET_NAME,
             Key=full_s3_path
         )
-
         archivo.delete()
-        
         messages.success(request, f"El archivo '{file_name}' ha sido eliminado exitosamente.")
-
     except (BotoCoreError, NoCredentialsError) as e:
         messages.error(request, f"Error de conexión con S3 al intentar borrar: {e}")
     except Exception as e:
@@ -561,9 +527,6 @@ def delete_archivo(request, pk):
     return redirect('prospecto-detail', pk=prospecto_pk)
 
 class CalendarioView(LoginRequiredMixin, TemplateView):
-    """
-    Renderiza la página principal que contendrá el calendario.
-    """
     template_name = 'ventas/calendario.html'
 
     def get_context_data(self, **kwargs):
@@ -573,12 +536,7 @@ class CalendarioView(LoginRequiredMixin, TemplateView):
 
 @login_required
 def calendario_eventos(request):
-    """
-    Proporciona los eventos (recordatorios) en formato JSON para FullCalendar.
-    """
     user = request.user
-    
-    # Filtrar recordatorios basados en el usuario (superuser ve todo)
     if user.is_superuser:
         recordatorios = Recordatorio.objects.all()
     else:
@@ -586,9 +544,7 @@ def calendario_eventos(request):
         
     eventos = []
     for recordatorio in recordatorios:
-        # Asignar un color basado en el estado del recordatorio
-        color = '#2ecc71' if recordatorio.completado else '#e74c3c' # Verde si está completado, rojo si no
-
+        color = '#2ecc71' if recordatorio.completado else '#e74c3c'
         eventos.append({
             'title': f"{recordatorio.titulo} ({recordatorio.prospecto.nombre_completo})",
             'start': recordatorio.fecha_recordatorio.isoformat(),
@@ -601,27 +557,18 @@ def calendario_eventos(request):
                 'status': 'Completado' if recordatorio.completado else 'Pendiente'
             }
         })
-        
     return JsonResponse(eventos, safe=False)
 
 class ClienteCerradoListView(LoginRequiredMixin, ListView):
-    """
-    Vista para listar únicamente los prospectos que han sido marcados como 'GANADO'.
-    """
     model = Prospecto
-    template_name = 'ventas/cliente_cerrado_list.html' # Usamos una nueva plantilla
+    template_name = 'ventas/cliente_cerrado_list.html'
     context_object_name = 'clientes'
     paginate_by = 10
 
     def get_queryset(self):
-        # Filtramos para obtener solo prospectos con estado 'GANADO'
         queryset = super().get_queryset().filter(estado=Prospecto.Estado.GANADO)
-        
-        # Si el usuario no es superusuario, filtramos por sus propios clientes
         if not self.request.user.is_superuser:
             queryset = queryset.filter(asignado_a=self.request.user)
-
-        # Mantenemos la funcionalidad de búsqueda
         query = self.request.GET.get('q')
         if query:
             queryset = queryset.filter(
@@ -629,19 +576,20 @@ class ClienteCerradoListView(LoginRequiredMixin, ListView):
                 Q(email__icontains=query) |
                 Q(empresa__icontains=query)
             )
-        
         return queryset.order_by('-fecha_actualizacion')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Añadimos un título personalizado para la plantilla
         context['page_title'] = 'Clientes Cerrados'
         return context
+
+# ==============================================================================
+# VISTAS DE GESTIÓN DE PROYECTOS
+# ==============================================================================
     
 @login_required
 def update_proyecto(request, pk):
     proyecto = get_object_or_404(Proyecto, pk=pk)
-    # Aquí puedes añadir validación de permisos si es necesario
     if request.method == 'POST':
         form = ProyectoUpdateForm(request.POST, instance=proyecto)
         if form.is_valid():
@@ -649,7 +597,12 @@ def update_proyecto(request, pk):
             messages.success(request, "Los detalles del proyecto han sido actualizados.")
         else:
             messages.error(request, "Hubo un error al actualizar el proyecto.")
-    return redirect('prospecto-detail', pk=proyecto.prospecto.pk)
+    
+    # ✅ --- MODIFICACIÓN ---
+    # Se redirige a la URL del prospecto con el ancla '#gestion' para
+    # que la vista se centre en la pestaña de gestión de proyecto.
+    redirect_url = reverse('prospecto-detail', kwargs={'pk': proyecto.prospecto.pk})
+    return HttpResponseRedirect(f"{redirect_url}#gestion")
 
 
 @login_required
@@ -664,7 +617,10 @@ def add_entregable(request, proyecto_pk):
             messages.success(request, "Entregable añadido correctamente.")
         else:
             messages.error(request, "Error al añadir el entregable.")
-    return redirect('prospecto-detail', pk=proyecto.prospecto.pk)
+
+    # ✅ --- MODIFICACIÓN ---
+    redirect_url = reverse('prospecto-detail', kwargs={'pk': proyecto.prospecto.pk})
+    return HttpResponseRedirect(f"{redirect_url}#gestion")
 
 @login_required
 def add_seguimiento_proyecto(request, proyecto_pk):
@@ -679,7 +635,10 @@ def add_seguimiento_proyecto(request, proyecto_pk):
             messages.success(request, "Seguimiento del proyecto registrado.")
         else:
             messages.error(request, "Error al registrar el seguimiento.")
-    return redirect('prospecto-detail', pk=proyecto.prospecto.pk)
+
+    # ✅ --- MODIFICACIÓN ---
+    redirect_url = reverse('prospecto-detail', kwargs={'pk': proyecto.prospecto.pk})
+    return HttpResponseRedirect(f"{redirect_url}#gestion")
 
 @login_required
 def asignar_miembro_equipo(request, proyecto_pk):
@@ -689,7 +648,6 @@ def asignar_miembro_equipo(request, proyecto_pk):
         if form.is_valid():
             miembro = form.save(commit=False)
             miembro.proyecto = proyecto
-            # Validar que no se añada dos veces
             if EquipoProyecto.objects.filter(proyecto=proyecto, trabajador=miembro.trabajador).exists():
                 messages.warning(request, f"El trabajador '{miembro.trabajador}' ya forma parte del equipo.")
             else:
@@ -697,13 +655,12 @@ def asignar_miembro_equipo(request, proyecto_pk):
                 messages.success(request, f"'{miembro.trabajador}' ha sido añadido al equipo del proyecto.")
         else:
             messages.error(request, "Error al asignar al miembro del equipo.")
-    return redirect('prospecto-detail', pk=proyecto.prospecto.pk)
+
+    # ✅ --- MODIFICACIÓN ---
+    redirect_url = reverse('prospecto-detail', kwargs={'pk': proyecto.prospecto.pk})
+    return HttpResponseRedirect(f"{redirect_url}#gestion")
 
 class ProyectoDetailView(LoginRequiredMixin, DetailView):
-    """
-    Vista detallada para la gestión de un proyecto específico.
-    Funciona como el dashboard principal del proyecto.
-    """
     model = Proyecto
     template_name = 'ventas/proyecto_detail.html'
     context_object_name = 'proyecto'
@@ -712,26 +669,19 @@ class ProyectoDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         proyecto = self.get_object()
 
-        # Añadimos los formularios necesarios para las acciones dentro del panel
         context['proyecto_form'] = ProyectoUpdateForm(instance=proyecto)
         context['entregable_form'] = EntregableForm()
         context['seguimiento_form'] = SeguimientoProyectoForm()
         context['asignar_miembro_form'] = AsignarMiembroEquipoForm()
 
-        # Pasamos al contexto toda la información relacionada para mostrarla
         context['equipo_proyecto'] = proyecto.equipoproyecto_set.all().select_related('trabajador')
         context['entregables'] = proyecto.entregables.all()
         context['seguimientos'] = proyecto.seguimientos.all().select_related('creado_por')
-        
-        # También pasamos el prospecto (cliente) para tener acceso a su información
         context['cliente'] = proyecto.prospecto
 
         return context
     
 class ProyectoFlujoTrabajoView(LoginRequiredMixin, DetailView):
-    """
-    Renderiza el tablero Kanban interactivo para un proyecto.
-    """
     model = Proyecto
     template_name = 'ventas/proyecto_flujo_trabajo.html'
     context_object_name = 'proyecto'
@@ -739,8 +689,6 @@ class ProyectoFlujoTrabajoView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         proyecto = self.get_object()
-
-        # Preparamos los datos para la librería jKanban en formato JSON
         boards = []
         columnas = proyecto.kanban_columnas.prefetch_related('tareas').all()
         
@@ -750,7 +698,7 @@ class ProyectoFlujoTrabajoView(LoginRequiredMixin, DetailView):
                 items.append({
                     'id': tarea.id,
                     'title': tarea.titulo,
-                    'description': tarea.descripcion, # Pasamos la descripción
+                    'description': tarea.descripcion,
                 })
             
             boards.append({
@@ -762,7 +710,9 @@ class ProyectoFlujoTrabajoView(LoginRequiredMixin, DetailView):
         context['kanban_data_json'] = json.dumps(boards)
         return context
 
-# --- Vistas de API para manejar acciones del Kanban ---
+# ==============================================================================
+# API VIEWS PARA KANBAN
+# ==============================================================================
 
 @login_required
 def crear_columna_api(request, proyecto_pk):
@@ -772,7 +722,6 @@ def crear_columna_api(request, proyecto_pk):
         proyecto = get_object_or_404(Proyecto, pk=proyecto_pk)
         
         if titulo:
-            # Creamos la nueva columna con un orden al final
             ultima_columna = proyecto.kanban_columnas.order_by('-orden').first()
             nuevo_orden = (ultima_columna.orden + 1) if ultima_columna else 0
             
@@ -788,7 +737,6 @@ def crear_tarea_api(request, columna_pk):
         columna = get_object_or_404(KanbanColumna, pk=columna_pk)
         
         if titulo:
-            # Creamos la nueva tarea con un orden al final de la columna
             ultima_tarea = columna.tareas.order_by('-orden').first()
             nuevo_orden = (ultima_tarea.orden + 1) if ultima_tarea else 0
 
@@ -808,7 +756,6 @@ def mover_tarea_api(request):
             nueva_columna = KanbanColumna.objects.get(pk=nueva_columna_id)
             
             tarea.columna = nueva_columna
-            # Aquí podrías añadir lógica para reordenar las tareas
             tarea.save()
             
             return JsonResponse({'status': 'success'})
@@ -816,3 +763,67 @@ def mover_tarea_api(request):
             return JsonResponse({'status': 'error', 'message': 'Tarea o columna no encontrada'}, status=404)
             
     return JsonResponse({'status': 'error'}, status=400)
+
+# ✅ --- NUEVAS VISTAS API PARA EDITAR Y ELIMINAR ---
+
+@login_required
+def editar_tarea_api(request, tarea_pk):
+    """Actualiza el título y la descripción de una tarea."""
+    if request.method == 'POST': # Usamos POST para simplicidad
+        try:
+            tarea = get_object_or_404(KanbanTarea, pk=tarea_pk)
+            data = json.loads(request.body)
+            
+            # Aquí puedes añadir validación de permisos
+            
+            tarea.titulo = data.get('titulo', tarea.titulo)
+            tarea.descripcion = data.get('descripcion', tarea.descripcion)
+            tarea.save()
+            
+            return JsonResponse({'status': 'success', 'message': 'Tarea actualizada.'})
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'JSON inválido.'}, status=400)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    return JsonResponse({'status': 'error', 'message': 'Método no permitido.'}, status=405)
+
+@login_required
+def eliminar_tarea_api(request, tarea_pk):
+    """Elimina una tarea del tablero Kanban."""
+    if request.method == 'POST': # Usamos POST para la eliminación
+        try:
+            tarea = get_object_or_404(KanbanTarea, pk=tarea_pk)
+            # Añadir validación de permisos si es necesario
+            tarea.delete()
+            return JsonResponse({'status': 'success', 'message': 'Tarea eliminada.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    return JsonResponse({'status': 'error', 'message': 'Método no permitido.'}, status=405)
+
+@login_required
+def editar_columna_api(request, columna_pk):
+    """Actualiza el título de una columna."""
+    if request.method == 'POST':
+        try:
+            columna = get_object_or_404(KanbanColumna, pk=columna_pk)
+            data = json.loads(request.body)
+            
+            columna.titulo = data.get('titulo', columna.titulo)
+            columna.save()
+
+            return JsonResponse({'status': 'success', 'message': 'Columna actualizada.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    return JsonResponse({'status': 'error', 'message': 'Método no permitido.'}, status=405)
+
+@login_required
+def eliminar_columna_api(request, columna_pk):
+    """Elimina una columna y todas sus tareas asociadas."""
+    if request.method == 'POST':
+        try:
+            columna = get_object_or_404(KanbanColumna, pk=columna_pk)
+            columna.delete() # Esto eliminará las tareas en cascada
+            return JsonResponse({'status': 'success', 'message': 'Columna eliminada.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    return JsonResponse({'status': 'error', 'message': 'Método no permitido.'}, status=405)
