@@ -117,6 +117,9 @@
                         <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#entregables">
                             <i class="fas fa-box-open fa-fw me-2"></i> Entregables
                         </button>
+                        <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#diagramas">
+                            <i class="fas fa-project-diagram fa-fw me-2"></i> Diagramas
+                        </button>
                         <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#seguimiento">
                             <i class="fas fa-chart-line fa-fw me-2"></i> Seguimiento
                         </button>
@@ -161,7 +164,17 @@
                             </form>
                             <ul class="list-group">
                                 {% for miembro in equipo_proyecto %}
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">{{ miembro.trabajador.nombre }} <span class="badge bg-primary rounded-pill">{{ miembro.rol }}</span></li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            {{ miembro.trabajador.nombre }} 
+                                            <span class="badge bg-primary rounded-pill">{{ miembro.rol }}</span>
+                                        </div>
+                                        <div>
+                                            <a href="{% url 'desasignar-miembro' miembro.pk %}" class="btn btn-sm btn-outline-danger" title="Desasignar miembro">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </a>
+                                        </div>
+                                    </li>
                                 {% empty %}
                                     <li class="list-group-item text-muted">Aún no hay miembros asignados.</li>
                                 {% endfor %}
@@ -182,19 +195,66 @@
                             </form>
                             <ul class="list-group">
                                 {% for entregable in entregables %}
-                                <li class="list-group-item">
-                                    {{ entregable.nombre }} - <small>{{ entregable.fecha_entrega|date:"d M Y" }}</small>
-                                    <span class="badge float-end 
-                                        {% if entregable.estado == 'COMPLETADO' %}bg-success
-                                        {% elif entregable.estado == 'EN_PROGRESO' %}bg-warning text-dark
-                                        {% else %}bg-secondary{% endif %}">
-                                        {{ entregable.get_estado_display }}
-                                    </span>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        {{ entregable.nombre }} - <small>{{ entregable.fecha_entrega|date:"d M Y" }}</small>
+                                        <span class="badge float-end 
+                                            {% if entregable.estado == 'COMPLETADO' %}bg-success
+                                            {% elif entregable.estado == 'EN_PROGRESO' %}bg-warning text-dark
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ entregable.get_estado_display }}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <a href="{% url 'entregable-update' entregable.pk %}" class="btn btn-sm btn-outline-primary" title="Editar entregable">
+                                            <i class="fas fa-pencil-alt"></i>
+                                        </a>
+                                        <a href="{% url 'entregable-delete' entregable.pk %}" class="btn btn-sm btn-outline-danger" title="Eliminar entregable">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </a>
+                                    </div>
                                 </li>
                                 {% empty %}
                                 <li class="list-group-item text-muted">No hay entregables definidos.</li>
                                 {% endfor %}
                             </ul>
+                        </div>
+                        
+                        <div class="tab-pane fade" id="diagramas">
+                            <h4><i class="fas fa-project-diagram me-2 text-primary"></i>Herramienta de Diagramas</h4>
+                            <p class="text-muted">Crea y gestiona diagramas de flujo o de arquitectura usando la sintaxis de Mermaid.js.</p>
+                            <hr>
+                    
+                            <div class="card card-body bg-light mb-4">
+                                <h5>Crear Nuevo Diagrama</h5>
+                                <div class="mb-2">
+                                    <label for="new-diagram-title" class="form-label">Título del Diagrama</label>
+                                    <input type="text" id="new-diagram-title" class="form-control" placeholder="Ej: Flujo de Aprobación">
+                                </div>
+                                <div class="mb-2">
+                                    <label for="new-diagram-code" class="form-label">Código Mermaid.js</label>
+                                    <textarea id="new-diagram-code" rows="6" class="form-control" placeholder="graph TD; A-->B;"></textarea>
+                                </div>
+                                <button id="save-diagram-btn" class="btn btn-success mt-2">Guardar Nuevo Diagrama</button>
+                            </div>
+                    
+                            <h5>Diagramas Guardados</h5>
+                            <div id="diagrams-list">
+                                {% for diagrama in proyecto.diagramas.all %}
+                                    <div class="card mb-2">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <strong>{{ diagrama.titulo }}</strong>
+                                            <div>
+                                                <a href="{% url 'descargar-diagrama-pdf' diagrama.pk %}" class="btn btn-sm btn-info" target="_blank" title="Descargar como PDF">
+                                                    <i class="fas fa-file-pdf me-1"></i> PDF
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% empty %}
+                                    <p class="text-muted">Aún no se han creado diagramas para este proyecto.</p>
+                                {% endfor %}
+                            </div>
                         </div>
 
                         <div class="tab-pane fade" id="seguimiento">
@@ -207,7 +267,19 @@
                             </form>
                             {% for item in seguimientos %}
                             <div class="timeline-item mb-3">
-                                <p class="mb-1">{{ item.notas|linebreaks }}</p>
+                                <div class="d-flex justify-content-between">
+                                    <p class="mb-1">{{ item.notas|linebreaks }}</p>
+                                    {% if item.creado_por == request.user or request.user.is_superuser %}
+                                    <div class="ms-3">
+                                        <a href="{% url 'seguimiento-update' item.pk %}" class="btn btn-sm btn-outline-primary py-0 px-1" title="Editar nota">
+                                            <i class="fas fa-pencil-alt small"></i>
+                                        </a>
+                                        <a href="{% url 'seguimiento-delete' item.pk %}" class="btn btn-sm btn-outline-danger py-0 px-1" title="Eliminar nota">
+                                            <i class="fas fa-trash-alt small"></i>
+                                        </a>
+                                    </div>
+                                    {% endif %}
+                                </div>
                                 <small class="text-muted"><i class="fas fa-user me-1"></i>{{ item.creado_por.username }} - <i class="far fa-clock me-1"></i>{{ item.fecha|date:"d M Y, H:i" }}</small>
                             </div>
                             {% empty %}
@@ -234,4 +306,49 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const saveBtn = document.getElementById('save-diagram-btn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', function() {
+            const titulo = document.getElementById('new-diagram-title').value;
+            const codigo = document.getElementById('new-diagram-code').value;
+            const csrfToken = '{{ csrf_token }}';
+            const url = "{% url 'api-guardar-diagrama' proyecto.pk %}";
+
+            if (!titulo.trim() || !codigo.trim()) {
+                alert('El título y el código del diagrama no pueden estar vacíos.');
+                return;
+            }
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    id: null,
+                    titulo: titulo,
+                    codigo: codigo
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('¡Diagrama guardado con éxito! La página se recargará.');
+                    location.reload();
+                } else {
+                    alert('Hubo un error al guardar el diagrama.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ocurrió un error de red. Revisa la consola para más detalles.');
+            });
+        });
+    }
+});
+</script>
 {% endblock %}
