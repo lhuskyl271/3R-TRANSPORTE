@@ -58,24 +58,23 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'mi_crm.wsgi.application'
 
-if ENVIRONMENT == 'local':
-    DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'mi_crm_db',
-        'USER': 'admin',   # el dueño que asignaste
-        'PASSWORD': '1234',  # la contraseña que pusiste al crear el usuario
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
-}
-else:  # Render / producción
+if os.environ.get('DATABASE_URL'):
     DATABASES = {
         'default': dj_database_url.config(
-            default=os.environ.get('DATABASE_URL')
+            default=os.environ['DATABASE_URL']
         )
     }
-
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'mi_crm_db',
+            'USER': 'admin',
+            'PASSWORD': '1234',
+            'HOST': 'localhost',
+            'PORT': '5432',
+        }
+    }
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
