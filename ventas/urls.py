@@ -37,6 +37,10 @@ from .views import (
     crear_columna_api,
     crear_tarea_api,
     mover_tarea_api,
+    actualizar_columna_api,
+    eliminar_columna_api,
+    actualizar_tarea_api,
+    eliminar_tarea_api,
 )
 
 urlpatterns = [
@@ -97,5 +101,11 @@ urlpatterns = [
     path('api/proyecto/<int:proyecto_pk>/columna/crear/', crear_columna_api, name='api-crear-columna'),
     path('api/columna/<int:columna_pk>/tarea/crear/', crear_tarea_api, name='api-crear-tarea'),
     path('api/tarea/mover/', mover_tarea_api, name='api-mover-tarea'),
+    
+    # --- 👇 LÍNEAS CORREGIDAS ---
+    path('api/columna/<int:columna_pk>/actualizar/', actualizar_columna_api, name='api-actualizar-columna'),
+    path('api/columna/<int:columna_pk>/eliminar/', eliminar_columna_api, name='api-eliminar-columna'),
+    path('api/tarea/<int:tarea_pk>/actualizar/', actualizar_tarea_api, name='api-actualizar-tarea'),
+    path('api/tarea/<int:tarea_pk>/eliminar/', eliminar_tarea_api, name='api-eliminar-tarea'),
 
 ]

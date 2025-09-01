@@ -143,3 +143,14 @@ class SeguimientoProyectoForm(forms.ModelForm):
         widgets = {
             'notas': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Describe la actualización o seguimiento...'}),
         }
+        
+# --- NUEVO FORMULARIO PARA TAREAS KANBAN ---
+class KanbanTareaForm(forms.ModelForm):
+    """Formulario para editar una tarea del tablero Kanban."""
+    class Meta:
+        model = KanbanTarea
+        fields = ['titulo', 'descripcion']
+        widgets = {
+            'titulo': forms.TextInput(attrs={'class': 'form-control'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+        }
